@@ -96,12 +96,15 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
       }
       
       if (targetDisplayIndex >= 0 && targetDisplayIndex < cols && targetDisplayIndex !== dragState.index) {
-        const newColumnOrder = [...columnOrder];
-        const draggedItem = newColumnOrder[dragState.index!];
-        newColumnOrder.splice(dragState.index!, 1);
-        newColumnOrder.splice(targetDisplayIndex, 0, draggedItem);
-        setColumnOrder(newColumnOrder);
-        setDragState(prev => ({ ...prev, index: targetDisplayIndex }));
+        // Prevent moving columns into fixed columns area
+        if (targetDisplayIndex >= fixedColumns) {
+          const newColumnOrder = [...columnOrder];
+          const draggedItem = newColumnOrder[dragState.index!];
+          newColumnOrder.splice(dragState.index!, 1);
+          newColumnOrder.splice(targetDisplayIndex, 0, draggedItem);
+          setColumnOrder(newColumnOrder);
+          setDragState(prev => ({ ...prev, index: targetDisplayIndex }));
+        }
       }
     } else if (dragState.type === 'row') {
       const targetIndex = Math.floor((e.clientY - rect.top) / 60); // Approximate row height
