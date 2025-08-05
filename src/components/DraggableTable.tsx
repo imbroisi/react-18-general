@@ -46,6 +46,11 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
     return defaultData;
   });
 
+  // Track row order
+  const [rowOrder, setRowOrder] = useState<number[]>(() => 
+    Array.from({ length: rows }, (_, i) => i)
+  );
+
   // Track row headers order
   const [rowHeadersOrder, setRowHeadersOrder] = useState<string[]>(() => 
     rowHeaders || Array.from({ length: rows }, (_, i) => `Row ${i + 1}`)
@@ -107,15 +112,33 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
         }
       }
     } else if (dragState.type === 'row') {
-      const targetIndex = Math.floor((e.clientY - rect.top) / 60); // Approximate row height
+      // Find the target row index based on mouse position
+      const rowCells = table.querySelectorAll('tbody tr');
+      let targetRowIndex = -1;
       
-      if (targetIndex !== dragState.index && targetIndex >= 0 && targetIndex < rows) {
+      for (let i = 0; i < rowCells.length; i++) {
+        const row = rowCells[i] as HTMLElement;
+        const rowRect = row.getBoundingClientRect();
+        if (e.clientY >= rowRect.top && e.clientY <= rowRect.bottom) {
+          targetRowIndex = i;
+          break;
+        }
+      }
+      
+      if (targetRowIndex >= 0 && targetRowIndex < rows && targetRowIndex !== dragState.index) {
+        const newRowOrder = [...rowOrder];
         const newRowHeadersOrder = [...rowHeadersOrder];
-        const draggedItem = newRowHeadersOrder[dragState.index!];
+        const draggedRowIndex = newRowOrder[dragState.index!];
+        const draggedHeader = newRowHeadersOrder[dragState.index!];
+        
+        newRowOrder.splice(dragState.index!, 1);
+        newRowOrder.splice(targetRowIndex, 0, draggedRowIndex);
         newRowHeadersOrder.splice(dragState.index!, 1);
-        newRowHeadersOrder.splice(targetIndex, 0, draggedItem);
+        newRowHeadersOrder.splice(targetRowIndex, 0, draggedHeader);
+        
+        setRowOrder(newRowOrder);
         setRowHeadersOrder(newRowHeadersOrder);
-        setDragState(prev => ({ ...prev, index: targetIndex }));
+        setDragState(prev => ({ ...prev, index: targetRowIndex }));
       }
     }
   }, [dragState, columnOrder, rowHeadersOrder, cols, rows]);
@@ -182,7 +205,8 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {data.map((row, displayIndex) => {
+          {rowOrder.map((originalRowIndex, displayIndex) => {
+            const row = data[originalRowIndex];
             const rowId = row.join('|'); // Create unique ID from row content
             return (
               <tr
@@ -195,20 +219,20 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
                 >
                   {rowHeadersOrder[displayIndex]}
                 </td>
-                {columnOrder.map((originalColIndex, displayIndex) => (
+                {columnOrder.map((originalColIndex, colDisplayIndex) => (
                   <td 
                     key={originalColIndex} 
                     className={`table-cell ${
-                      displayIndex === 0 ? 'checkbox-cell checkbox-column' : ''
+                      colDisplayIndex === 0 ? 'checkbox-cell checkbox-column' : ''
                     } ${
-                      dragState.isDragging && dragState.type === 'column' && dragState.index === displayIndex 
+                      dragState.isDragging && dragState.type === 'column' && dragState.index === colDisplayIndex 
                         ? 'dragging-column-cell' 
                         : dragState.isDragging && dragState.type === 'row' && dragState.index === displayIndex
                         ? 'dragging-row-cell'
                         : ''
                     } ${checkedRows.has(rowId) ? 'checked-row' : ''}`}
                   >
-                    {displayIndex === 0 ? (
+                    {colDisplayIndex === 0 ? (
                       <input
                         type="checkbox"
                         checked={checkedRows.has(rowId)}
