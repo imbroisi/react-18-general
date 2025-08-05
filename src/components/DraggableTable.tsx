@@ -95,7 +95,7 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
         const cell = headerCells[i] as HTMLElement;
         const cellRect = cell.getBoundingClientRect();
         if (e.clientX >= cellRect.left && e.clientX <= cellRect.right) {
-          targetDisplayIndex = i - 1; // Subtract 1 for corner cell
+          targetDisplayIndex = i - 2; // Subtract 2 for corner cell and checkbox column
           break;
         }
       }
@@ -193,10 +193,11 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
         <thead>
           <tr>
             <th className="corner-cell"></th>
+            <th className="checkbox-header"></th>
             {columnOrder.map((originalColIndex, displayIndex) => (
               <th
                 key={originalColIndex}
-                className={`${displayIndex === 0 ? 'checkbox-header' : displayIndex < fixedColumns ? 'fixed-header' : 'draggable-header'} ${dragState.isDragging && dragState.type === 'column' && dragState.index === displayIndex ? 'dragging' : ''}`}
+                className={`${displayIndex < fixedColumns ? 'fixed-header' : 'draggable-header'} ${dragState.isDragging && dragState.type === 'column' && dragState.index === displayIndex ? 'dragging' : ''}`}
                 onMouseDown={displayIndex < fixedColumns ? undefined : (e) => handleMouseDown(e, 'column', displayIndex)}
               >
                 {columnHeaders ? columnHeaders[originalColIndex] : `Col ${originalColIndex + 1}`}
@@ -214,6 +215,16 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
                 className={`draggable-row ${dragState.isDragging && dragState.type === 'row' && dragState.index === displayIndex ? 'dragging' : ''} ${checkedRows.has(rowId) ? 'checked-row' : ''}`}
               >
                 <td
+                  className={`checkbox-cell ${dragState.isDragging && dragState.type === 'row' && dragState.index === displayIndex ? 'dragging' : ''} ${checkedRows.has(rowId) ? 'checked-row' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checkedRows.has(rowId)}
+                    onChange={() => handleCheckboxChange(row)}
+                    className="row-checkbox"
+                  />
+                </td>
+                <td
                   className={`row-header ${dragState.isDragging && dragState.type === 'row' && dragState.index === displayIndex ? 'dragging' : ''} ${checkedRows.has(rowId) ? 'checked-row' : ''}`}
                   onMouseDown={(e) => handleMouseDown(e, 'row', displayIndex)}
                 >
@@ -223,8 +234,6 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
                   <td 
                     key={originalColIndex} 
                     className={`table-cell ${
-                      colDisplayIndex === 0 ? 'checkbox-cell checkbox-column' : ''
-                    } ${
                       dragState.isDragging && dragState.type === 'column' && dragState.index === colDisplayIndex 
                         ? 'dragging-column-cell' 
                         : dragState.isDragging && dragState.type === 'row' && dragState.index === displayIndex
@@ -232,16 +241,7 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
                         : ''
                     } ${checkedRows.has(rowId) ? 'checked-row' : ''}`}
                   >
-                    {colDisplayIndex === 0 ? (
-                      <input
-                        type="checkbox"
-                        checked={checkedRows.has(rowId)}
-                        onChange={() => handleCheckboxChange(row)}
-                        className="row-checkbox"
-                      />
-                    ) : (
-                      row[originalColIndex]
-                    )}
+                    {row[originalColIndex]}
                   </td>
                 ))}
               </tr>

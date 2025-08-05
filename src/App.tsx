@@ -44,15 +44,11 @@ function App() {
       } while (nomesUsados.has(nomeCompleto));
       nomesUsados.add(nomeCompleto);
       
-      // Checkbox (será gerenciado pelo componente)
-      row.push(''); // Placeholder para checkbox
+
       
       // CEP (formato: 00000-000)
       const cep = `${String(Math.floor(Math.random() * 90000) + 10000)}-${String(Math.floor(Math.random() * 900) + 100)}`;
       row.push(cep);
-      
-      // Esporte
-      row.push(esportes[Math.floor(Math.random() * esportes.length)]);
       
       // Sobrenome com número sequencial
       const sobrenome = sobrenomes[Math.floor(Math.random() * sobrenomes.length)];
@@ -60,6 +56,9 @@ function App() {
       
       // Sobrenome
       row.push(sobrenomeComNumero);
+      
+      // Esporte
+      row.push(esportes[Math.floor(Math.random() * esportes.length)]);
       
       // Idade (18-80 anos)
       row.push(Math.floor(Math.random() * 63) + 18 + ' anos');
@@ -82,14 +81,14 @@ function App() {
       
       <DraggableTable 
         rows={8} 
-        cols={7} 
+        cols={6} 
         data={tableData}
-        columnHeaders={['', 'CEP', 'Esporte', 'Sobrenome', 'Idade', 'Sexo', 'Cidade']}
+        columnHeaders={['CEP', 'Sobrenome', 'Esporte', 'Idade', 'Sexo', 'Cidade']}
         rowHeaders={Array.from({ length: 8 }, (_, i) => {
           const nome = nomes[Math.floor(Math.random() * nomes.length)];
           return `${nome} ${i + 1}`;
         })}
-        fixedColumns={3}
+        fixedColumns={2}
       />
 
       {/* <NestedDivs leftMargin={120} 
