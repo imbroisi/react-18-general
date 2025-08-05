@@ -1,0 +1,44 @@
+.outer-container {
+  width: 600px;
+  height: 400px;
+  border: 1px solid black;
+  background: white;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0;
+  overflow: hidden;
+}
+
+.middle-container {
+  height: 300px;
+  border: 1px solid #888;
+  background: #eee;
+  width: calc(100% - 12px);
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.inner-container {
+  height: 150px;
+  border: 1px solid orange;
+  width: calc(100% - 72px);
+  margin-right: 12px;
+  margin-left: 60px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.text-container {
+  text-align: left;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 8px;
+} 

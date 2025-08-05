@@ -2,8 +2,15 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+describe('App Component', () => {
+  test('renders app title', () => {
+    render(<App />);
+    expect(screen.getByText('React Context API Example')).toBeInTheDocument();
+  });
+
+  test('renders parent component', () => {
+    render(<App />);
+    expect(screen.getByText('Parent Component')).toBeInTheDocument();
+  });
 });
+
