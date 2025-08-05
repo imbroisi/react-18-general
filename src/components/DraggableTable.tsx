@@ -193,11 +193,11 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
         <thead>
           <tr>
             <th className="corner-cell"></th>
-            <th className="checkbox-header"></th>
+            <th className="checkbox-header">Nome</th>
             {columnOrder.map((originalColIndex, displayIndex) => (
               <th
                 key={originalColIndex}
-                className={`${displayIndex < fixedColumns ? 'fixed-header' : 'draggable-header'} ${dragState.isDragging && dragState.type === 'column' && dragState.index === displayIndex ? 'dragging' : ''}`}
+                className={`${displayIndex < fixedColumns ? 'fixed-header' : 'draggable-header'} ${displayIndex === fixedColumns - 1 ? 'last-fixed-header' : ''} ${dragState.isDragging && dragState.type === 'column' && dragState.index === displayIndex ? 'dragging' : ''}`}
                 onMouseDown={displayIndex < fixedColumns ? undefined : (e) => handleMouseDown(e, 'column', displayIndex)}
               >
                 {columnHeaders ? columnHeaders[originalColIndex] : `Col ${originalColIndex + 1}`}
@@ -233,7 +233,7 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
                 {columnOrder.map((originalColIndex, colDisplayIndex) => (
                   <td 
                     key={originalColIndex} 
-                    className={`table-cell ${
+                    className={`table-cell ${colDisplayIndex === fixedColumns - 1 ? 'last-fixed-cell' : ''} ${
                       dragState.isDragging && dragState.type === 'column' && dragState.index === colDisplayIndex 
                         ? 'dragging-column-cell' 
                         : dragState.isDragging && dragState.type === 'row' && dragState.index === displayIndex
