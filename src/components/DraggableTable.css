@@ -92,9 +92,9 @@
   cursor: default;
   user-select: none;
   position: relative;
-  width: 50px !important;
-  min-width: 50px !important;
-  max-width: 50px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
   padding: 8px 4px !important;
   box-sizing: border-box !important;
 }
@@ -150,9 +150,9 @@
 /* Checkbox styling */
 .checkbox-cell {
   text-align: center;
-  width: 50px !important;
-  min-width: 50px !important;
-  max-width: 50px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
   padding: 8px 4px !important;
   box-sizing: border-box !important;
 }
@@ -167,9 +167,9 @@
 }
 
 .draggable-table th.checkbox-header {
-  width: 50px !important;
-  min-width: 50px !important;
-  max-width: 50px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
   padding: 8px 4px !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
@@ -177,17 +177,17 @@
 
 /* Force checkbox column width */
 .draggable-table th:first-child {
-  width: 50px !important;
-  min-width: 50px !important;
-  max-width: 50px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
   padding: 8px 4px !important;
   box-sizing: border-box !important;
 }
 
 .draggable-table td:first-child {
-  width: 50px !important;
-  min-width: 50px !important;
-  max-width: 50px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
   padding: 8px 4px !important;
   box-sizing: border-box !important;
 }

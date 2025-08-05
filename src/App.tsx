@@ -46,16 +46,16 @@ function App() {
       
 
       
-      // CEP (formato: 00000-000)
-      const cep = `${String(Math.floor(Math.random() * 90000) + 10000)}-${String(Math.floor(Math.random() * 900) + 100)}`;
-      row.push(cep);
-      
       // Sobrenome com número sequencial
       const sobrenome = sobrenomes[Math.floor(Math.random() * sobrenomes.length)];
       const sobrenomeComNumero = `${sobrenome} ${i + 1}`;
       
       // Sobrenome
       row.push(sobrenomeComNumero);
+      
+      // CEP (formato: 00000-000)
+      const cep = `${String(Math.floor(Math.random() * 90000) + 10000)}-${String(Math.floor(Math.random() * 900) + 100)}`;
+      row.push(cep);
       
       // Esporte
       row.push(esportes[Math.floor(Math.random() * esportes.length)]);
@@ -83,7 +83,7 @@ function App() {
         rows={8} 
         cols={6} 
         data={tableData}
-        columnHeaders={['CEP', 'Sobrenome', 'Esporte', 'Idade', 'Sexo', 'Cidade']}
+        columnHeaders={['Sobrenome', 'CEP', 'Esporte', 'Idade', 'Sexo', 'Cidade']}
         rowHeaders={Array.from({ length: 8 }, (_, i) => {
           const nome = nomes[Math.floor(Math.random() * nomes.length)];
           return `${nome} ${i + 1}`;
