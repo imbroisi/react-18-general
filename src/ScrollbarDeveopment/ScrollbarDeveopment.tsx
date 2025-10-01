@@ -13,20 +13,41 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
   // State for parent-controlled scrolling
   const [scrollPosition, setScrollPosition] = useState({ top: 0, left: 0 });
   const [thumbPosition, setThumbPosition] = useState({ scrollTop: 0, scrollLeft: 0, scrollPercentageV: 0, scrollPercentageH: 0 });
+  
+  // Test controls to prove parent control
+  const [parentControlEnabled, setParentControlEnabled] = useState(true);
+  const [contentMovementEnabled, setContentMovementEnabled] = useState(true);
+  const [callbackEnabled, setCallbackEnabled] = useState(true);
 
   // Handle thumb movements from the hook
   const handleThumbMove = (position: { scrollTop: number; scrollLeft: number; scrollPercentageV: number; scrollPercentageH: number }) => {
+    if (!callbackEnabled) {
+      console.log('🚫 Parent callback DISABLED - ignoring thumb move:', position);
+      return; // Parent ignores thumb movements
+    }
+    
     console.log('🎯 Parent received thumb move:', position);
     
-    // Update thumb position state
+    // Update thumb position state (always update for dashboard)
     setThumbPosition(position);
+    
+    if (!parentControlEnabled) {
+      console.log('🚫 Parent control DISABLED - not updating scroll position');
+      return; // Parent doesn't update scroll position
+    }
     
     // Parent controls the actual content scrolling
     setScrollPosition({ top: position.scrollTop, left: position.scrollLeft });
     
+    if (!contentMovementEnabled) {
+      console.log('🚫 Content movement DISABLED - not moving content');
+      return; // Parent doesn't move content
+    }
+    
     // Apply the scroll to the content element
     if (contentRef.current) {
       contentRef.current.style.transform = `translate(-${position.scrollLeft}px, -${position.scrollTop}px)`;
+      console.log('✅ Content moved by parent to:', `translate(-${position.scrollLeft}px, -${position.scrollTop}px)`);
     }
   };
 
@@ -133,11 +154,69 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
           fontFamily: 'monospace'
         }}>
           <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>📊 Parent Control Dashboard:</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', color: '#2c3e50' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', color: '#2c3e50', marginBottom: '15px' }}>
             <div><strong>Scroll Position:</strong> {scrollPosition.top.toFixed(0)}px, {scrollPosition.left.toFixed(0)}px</div>
             <div><strong>Thumb Position:</strong> {thumbPosition.scrollTop.toFixed(0)}px, {thumbPosition.scrollLeft.toFixed(0)}px</div>
             <div><strong>Vertical %:</strong> {thumbPosition.scrollPercentageV.toFixed(1)}%</div>
             <div><strong>Horizontal %:</strong> {thumbPosition.scrollPercentageH.toFixed(1)}%</div>
+          </div>
+          
+          {/* Test Control Buttons */}
+          <div style={{ borderTop: '1px solid #3498db', paddingTop: '15px' }}>
+            <h5 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>🧪 Test Parent Control (Drag thumb to test):</h5>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => setCallbackEnabled(!callbackEnabled)}
+                style={{ 
+                  padding: '8px 12px', 
+                  backgroundColor: callbackEnabled ? '#e74c3c' : '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                {callbackEnabled ? '🚫 Disable Callback' : '✅ Enable Callback'}
+              </button>
+              
+              <button 
+                onClick={() => setParentControlEnabled(!parentControlEnabled)}
+                style={{ 
+                  padding: '8px 12px', 
+                  backgroundColor: parentControlEnabled ? '#e74c3c' : '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                {parentControlEnabled ? '🚫 Disable Parent Control' : '✅ Enable Parent Control'}
+              </button>
+              
+              <button 
+                onClick={() => setContentMovementEnabled(!contentMovementEnabled)}
+                style={{ 
+                  padding: '8px 12px', 
+                  backgroundColor: contentMovementEnabled ? '#e74c3c' : '#27ae60',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                {contentMovementEnabled ? '🚫 Disable Content Movement' : '✅ Enable Content Movement'}
+              </button>
+            </div>
+            
+            <div style={{ marginTop: '10px', fontSize: '12px', color: '#7f8c8d' }}>
+              <strong>Status:</strong> 
+              <span style={{ color: callbackEnabled ? '#27ae60' : '#e74c3c' }}> Callback: {callbackEnabled ? 'ON' : 'OFF'}</span> |
+              <span style={{ color: parentControlEnabled ? '#27ae60' : '#e74c3c' }}> Parent Control: {parentControlEnabled ? 'ON' : 'OFF'}</span> |
+              <span style={{ color: contentMovementEnabled ? '#27ae60' : '#e74c3c' }}> Content Movement: {contentMovementEnabled ? 'ON' : 'OFF'}</span>
+            </div>
           </div>
         </div>
         <div 
@@ -177,13 +256,21 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
             <p><strong>✅ No direct scrolling - everything goes through parent</strong></p>
             <p><strong>🪟 Windows scrollbar detection only</strong></p>
             
-            <h3>How it works:</h3>
+            <h3>🧪 Test Parent Control:</h3>
             <ul>
               <li><strong>🎯 Drag scrollbar thumb</strong> → Parent receives position data</li>
-              <li><strong>🎛️ Parent controls content</strong> → Content moves via transform</li>
-              <li><strong>❌ Mouse wheel blocked</strong> → Parent has full control</li>
-              <li><strong>❌ Keyboard scroll blocked</strong> → Parent has full control</li>
-              <li><strong>📊 Real-time feedback</strong> → Dashboard shows all data</li>
+              <li><strong>🔴 Disable Callback</strong> → Thumb moves but parent ignores it</li>
+              <li><strong>🔴 Disable Parent Control</strong> → Parent receives data but doesn't update state</li>
+              <li><strong>🔴 Disable Content Movement</strong> → Parent updates state but doesn't move content</li>
+              <li><strong>📊 Dashboard shows</strong> → What parent knows vs what user sees</li>
+            </ul>
+            
+            <h3>Expected Results:</h3>
+            <ul>
+              <li><strong>All ON</strong> → Thumb moves, content moves, dashboard updates</li>
+              <li><strong>Callback OFF</strong> → Thumb moves, content stays, dashboard frozen</li>
+              <li><strong>Parent Control OFF</strong> → Thumb moves, content stays, dashboard updates partially</li>
+              <li><strong>Content Movement OFF</strong> → Thumb moves, content stays, dashboard updates fully</li>
             </ul>
             
             <div style={{ marginTop: '100px', padding: '20px', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
