@@ -8,6 +8,9 @@ interface DraggableTableProps {
   columnHeaders?: string[];
   rowHeaders?: string[];
   fixedColumns?: number; // Number of fixed columns from the left
+  onCellClick?: (rowIndex: number, colIndex: number, rowData: string[], colHeader: string) => void;
+  onCellDoubleClick?: (rowIndex: number, colIndex: number, rowData: string[], colHeader: string) => void;
+  onClearCellSelections?: () => void;
 }
 
 interface DragState {
@@ -24,7 +27,10 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
   data: initialData, 
   columnHeaders, 
   rowHeaders,
-  fixedColumns = 0
+  fixedColumns = 0,
+  onCellClick,
+  onCellDoubleClick,
+  onClearCellSelections
 }) => {
   // Track the order of columns
   const [columnOrder, setColumnOrder] = useState<number[]>(() => 
@@ -58,6 +64,9 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
 
   // Track checked rows by unique identifier
   const [checkedRows, setCheckedRows] = useState<Set<string>>(new Set());
+
+  // Track selected cells by unique identifier (rowIndex-colIndex)
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
 
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
@@ -158,13 +167,51 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
     setCheckedRows(prev => {
       const newSet = new Set(prev);
       if (newSet.has(rowId)) {
+        // If we're deselecting a row, clear all cell selections
         newSet.delete(rowId);
+        setSelectedCells(new Set()); // Clear all selected cells
+        if (onClearCellSelections) {
+          onClearCellSelections(); // Notify parent to clear cell info
+        }
       } else {
         newSet.add(rowId);
       }
       return newSet;
     });
-  }, []);
+  }, [onClearCellSelections]);
+
+  const handleCellClick = useCallback((rowIndex: number, colIndex: number) => {
+    const cellId = `${rowIndex}-${colIndex}`;
+    setSelectedCells(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cellId)) {
+        newSet.delete(cellId);
+      } else {
+        newSet.add(cellId);
+      }
+      return newSet;
+    });
+
+    // Call parent callback if provided
+    if (onCellClick) {
+      const originalRowIndex = rowOrder[rowIndex];
+      const originalColIndex = columnOrder[colIndex];
+      const rowData = data[originalRowIndex];
+      const colHeader = columnHeaders ? columnHeaders[originalColIndex] : `Col ${originalColIndex + 1}`;
+      onCellClick(rowIndex, colIndex, rowData, colHeader);
+    }
+  }, [onCellClick, rowOrder, columnOrder, data, columnHeaders]);
+
+  const handleCellDoubleClick = useCallback((rowIndex: number, colIndex: number) => {
+    // Call parent callback if provided
+    if (onCellDoubleClick) {
+      const originalRowIndex = rowOrder[rowIndex];
+      const originalColIndex = columnOrder[colIndex];
+      const rowData = data[originalRowIndex];
+      const colHeader = columnHeaders ? columnHeaders[originalColIndex] : `Col ${originalColIndex + 1}`;
+      onCellDoubleClick(rowIndex, colIndex, rowData, colHeader);
+    }
+  }, [onCellDoubleClick, rowOrder, columnOrder, data, columnHeaders]);
 
   React.useEffect(() => {
     if (dragState.isDragging) {
@@ -230,20 +277,25 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
                 >
                   {rowHeadersOrder[displayIndex]}
                 </td>
-                {columnOrder.map((originalColIndex, colDisplayIndex) => (
-                  <td 
-                    key={originalColIndex} 
-                    className={`table-cell ${colDisplayIndex === fixedColumns - 1 ? 'last-fixed-cell' : ''} ${
-                      dragState.isDragging && dragState.type === 'column' && dragState.index === colDisplayIndex 
-                        ? 'dragging-column-cell' 
-                        : dragState.isDragging && dragState.type === 'row' && dragState.index === displayIndex
-                        ? 'dragging-row-cell'
-                        : ''
-                    } ${checkedRows.has(rowId) ? 'checked-row' : ''}`}
-                  >
-                    {row[originalColIndex]}
-                  </td>
-                ))}
+                {columnOrder.map((originalColIndex, colDisplayIndex) => {
+                  const cellId = `${displayIndex}-${colDisplayIndex}`;
+                  return (
+                    <td 
+                      key={originalColIndex} 
+                      className={`table-cell ${colDisplayIndex === fixedColumns - 1 ? 'last-fixed-cell' : ''} ${
+                        dragState.isDragging && dragState.type === 'column' && dragState.index === colDisplayIndex 
+                          ? 'dragging-column-cell' 
+                          : dragState.isDragging && dragState.type === 'row' && dragState.index === displayIndex
+                          ? 'dragging-row-cell'
+                          : ''
+                      } ${checkedRows.has(rowId) ? 'checked-row' : ''} ${selectedCells.has(cellId) ? 'selected-cell' : ''}`}
+                      onClick={() => handleCellClick(displayIndex, colDisplayIndex)}
+                      onDoubleClick={() => handleCellDoubleClick(displayIndex, colDisplayIndex)}
+                    >
+                      {row[originalColIndex]}
+                    </td>
+                  );
+                })}
               </tr>
             );
           })}

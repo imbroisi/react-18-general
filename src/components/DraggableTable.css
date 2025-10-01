@@ -257,6 +257,16 @@
   background: #fff3e0 !important;
 }
 
+/* Selected cell styling */
+.selected-cell {
+  background: #ffe6cc !important;
+  transition: background-color 0.2s ease;
+}
+
+.selected-cell:hover {
+  background: #ffd699 !important;
+}
+
 /* Drop zone indicators */
 .draggable-table.dragging-column th:not(.dragging) {
   transition: background-color 0.2s ease;

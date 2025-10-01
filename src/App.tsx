@@ -1,116 +1,159 @@
-import React, { useMemo } from 'react';
+import { useRef, useState } from 'react';
 import './App.css';
-import DraggableTable from './components/DraggableTable';
+import Cell from './components/Cell/Cell';
+import ScrollbarDeveopment from './ScrollbarDeveopment';
 
-const sobrenomes = [
-  'Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Almeida', 
-  'Pereira', 'Lima', 'Gomes', 'Costa', 'Ribeiro', 'Martins', 'Carvalho', 
-  'Alves', 'Lopes', 'Soares', 'Fernandes', 'Vieira', 'Barbosa'
-];
+const COLS = 5;
 
-const nomes = [
-  'João', 'Maria', 'Pedro', 'Ana', 'Carlos', 'Lucia', 'Fernando', 'Juliana',
-  'Ricardo', 'Patricia', 'Marcos', 'Camila', 'Andre', 'Gabriela', 'Lucas',
-  'Isabela', 'Rafael', 'Mariana', 'Diego', 'Carolina', 'Thiago', 'Beatriz'
-];
+const App = () => {
+  const [show, setShow] = useState<boolean[]>(new Array(19).fill(true));
+  const [rotatedArrows, setRotatedArrows] = useState<boolean[]>(new Array(19).fill(true));
 
-const cidades = [
-  'São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Salvador', 'Brasília',
-  'Fortaleza', 'Curitiba', 'Recife', 'Porto Alegre', 'Manaus', 'Belém',
-  'Goiânia', 'Guarulhos', 'Campinas', 'Nova Iguaçu', 'São Gonçalo'
-];
+  const toggleArrow = (index: number) => {
+    const newRotatedArrows = [...rotatedArrows];
+    newRotatedArrows[index] = !newRotatedArrows[index];
+    setRotatedArrows(newRotatedArrows);
 
-const esportes = [
-  'Futebol', 'Basquete', 'Vôlei', 'Tênis', 'Natação', 'Corrida', 'Ciclismo',
-  'Handebol', 'Atletismo', 'Ginástica', 'Boxe', 'MMA', 'Surf', 'Skate',
-  'Yoga', 'Pilates', 'Crossfit', 'Musculação', 'Dança'
-];
+    const newShow = [...show];
+    newShow[index] = !newShow[index];
+    setShow(newShow);
+  };
+  const fixedColumnRef = useRef<HTMLDivElement>(null);
+  const scrollableColumnRef = useRef<HTMLDivElement>(null);
 
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const scrollingElement = event.currentTarget;
+    const isFixedColumn = scrollingElement === fixedColumnRef.current;
 
-
-function App() {
-  const tableData = useMemo(() => {
-    const data: string[][] = [];
-    const nomesUsados = new Set<string>();
-    
-    for (let i = 0; i < 8; i++) {
-      const row: string[] = [];
-      
-      let nomeCompleto: string;
-      do {
-        const nome = nomes[Math.floor(Math.random() * nomes.length)];
-        const sobrenome = sobrenomes[Math.floor(Math.random() * sobrenomes.length)];
-        nomeCompleto = `${nome} ${sobrenome}`;
-      } while (nomesUsados.has(nomeCompleto));
-      nomesUsados.add(nomeCompleto);
-      
-
-      
-      // Sobrenome com número sequencial
-      const sobrenome = sobrenomes[Math.floor(Math.random() * sobrenomes.length)];
-      const sobrenomeComNumero = `${sobrenome} ${i + 1}`;
-      
-      // Sobrenome
-      row.push(sobrenomeComNumero);
-      
-      // CEP (formato: 00000-000)
-      const cep = `${String(Math.floor(Math.random() * 90000) + 10000)}-${String(Math.floor(Math.random() * 900) + 100)}`;
-      row.push(cep);
-      
-      // Esporte
-      row.push(esportes[Math.floor(Math.random() * esportes.length)]);
-      
-      // Idade (18-80 anos)
-      row.push(Math.floor(Math.random() * 63) + 18 + ' anos');
-      
-      // Sexo
-      row.push(Math.random() > 0.5 ? 'Masculino' : 'Feminino');
-      
-      // Cidade
-      row.push(cidades[Math.floor(Math.random() * cidades.length)]);
-      
-      data.push(row);
+    if (isFixedColumn && scrollableColumnRef.current) {
+      scrollableColumnRef.current.scrollTop = scrollingElement.scrollTop;
+    } else if (!isFixedColumn && fixedColumnRef.current) {
+      fixedColumnRef.current.scrollTop = scrollingElement.scrollTop;
     }
-    
-    return data;
-  }, []);
+  };
+
+  console.log(show);
+
+  // return (
+  //   <div className="table-container">
+  //     {/* ======================== Left Content ======================== */}
+
+  //     {/* Fixed column section */}
+  //     <div className="fixed-column">
+  //       {/* Fixed column header */}
+  //       <div className="fixed-column-header">
+  //         {/* Row # */}
+  //         {/* <button onClick={() => setShow(!show)}>Toggle</button> */}
+  //       </div>
+
+  //       {/* Fixed column scrollable content */}
+  //       <div
+  //         ref={fixedColumnRef}
+  //         onScroll={handleScroll}
+  //         className="fixed-column-content"
+  //         style={{
+  //           // Do not move to CSS, as this will cause a delay in verical scrolling synchronization
+  //           overflow: 'hidden',
+  //           overflowY: 'scroll',
+  //           scrollbarWidth: 'none',
+  //           msOverflowStyle: 'none'
+  //         }}>
+  //         <div className="fixed-column-table">
+  //           {Array.from({ length: 19 }).map((_, rowIndex) => (
+  //             <div
+  //               key={rowIndex}
+  //               className="fixed-column-row"
+  //               style={{
+  //                 height: show[rowIndex] ? '120px' : '0',
+  //                 maxHeight: show[rowIndex] ? '120px' : '0',
+  //                 overflow: 'hidden'
+  //               }}
+  //             >
+  //               <div className="fixed-column-cell" style={{
+  //                 height: show[rowIndex] ? '40px' : '0'
+  //               }}>
+  //                 Holding {rowIndex + 1}
+  //                 <span
+  //                   onClick={() => toggleArrow(rowIndex)}
+  //                   className="arrow-icon"
+  //                   style={{
+  //                     transform: rotatedArrows[rowIndex] ? 'rotate(90deg)' : 'none'
+  //                   }}>▶</span>
+
+  //                 <div className="expandable-content" style={{
+  //                   height: show[rowIndex] ? '90px' : '0',
+  //                   overflow: 'hidden',
+  //                   paddingTop: '3px',
+  //                   // padding: 0,
+  //                 }}>
+  //                   Item 1
+  //                   <br />
+  //                   Other item
+  //                   <br />
+  //                   Another item
+  //                   <br />
+  //                   Yet another item
+  //                   <br />
+  //                 </div>
+
+  //               </div>
+  //             </div>
+  //           ))}
+  //         </div>
+  //       </div>
+  //     </div>
+
+  //     {/* ======================== Holdings Links ======================== */}
+
+  //     {/* Scrollable section */}
+  //     <div
+  //       ref={scrollableColumnRef}
+  //       onScroll={handleScroll}
+  //       className="scrollable-section"
+  //       style={{
+  //         // Do not move to CSS, as this will cause a delay in vertical scrolling synchronization.
+  //         overflow: 'auto'
+  //       }}>
+  //       <div className="scrollable-content" style={{ width: `${COLS * 300}px` }}>
+  //         {/* Header row */}
+  //         <div className="scrollable-header">
+  //           {Array.from({ length: COLS }).map((_, colIndex) => (
+  //             <div
+  //               key={colIndex}
+  //               className="header-cell"
+  //             >
+  //               {colIndex + 2023}
+  //             </div>
+  //           ))}
+  //         </div>
+
+  //         {/* Table content */}
+  //         <div className="table-content" style={{ width: `${COLS * 300}px` }}>
+  //           {Array.from({ length: 19 }).map((_, rowIndex) => (
+  //             <div key={rowIndex} className="table-row" style={{
+  //               height: show[rowIndex] ? '120px' : '0',
+  //               maxHeight: show[rowIndex] ? '120px' : '0',
+  //               overflow: 'hidden'
+  //             }}>
+  //               {Array.from({ length: COLS }).map((_, colIndex) => (
+  //                 <Cell
+  //                   key={colIndex}
+  //                   showMe={show[rowIndex]}
+  //                   label={`R${rowIndex + 2} C${colIndex + 2}`}
+  //                 />
+  //               ))}
+  //             </div>
+  //           ))}
+  //         </div>
+  //       </div>
+  //     </div>
+  //   </div>
+
+  // );
 
   return (
-    <div className="App">
-      <h1>Tabela com Drag and Drop</h1>
-      
-      <DraggableTable 
-        rows={8} 
-        cols={6} 
-        data={tableData}
-        columnHeaders={['Sobrenome', 'CEP', 'Esporte', 'Idade', 'Sexo', 'Cidade']}
-        rowHeaders={Array.from({ length: 8 }, (_, i) => {
-          const nome = nomes[Math.floor(Math.random() * nomes.length)];
-          return `${nome} ${i + 1}`;
-        })}
-        fixedColumns={2}
-      />
-
-      {/* <NestedDivs leftMargin={120} 
-        text="Hello, world! This is a long text that should be truncated if it exceeds the width of the container." /> */}
-
-      {/* <h1>Progress Bar Examples</h1>
-      
-      <div style={{ padding: '20px' }}>
-        <h3>Default Progress Bar</h3>
-        <ProgressBar value={progress} />
-        
-        <h3>Custom Color Progress Bar</h3>
-        <ProgressBar value={progress} color="#4caf50" />
-        
-        <h3>Taller Progress Bar</h3>
-        <ProgressBar value={progress} height={16} color="#f44336" />
-        
-        <h3>Without Value Indicator</h3>
-        <ProgressBar value={progress} showValue={false} color="#9c27b0" />
-      </div> */}
-    </div>
+    <ScrollbarDeveopment />
   );
-}
+};
 
 export default App;
