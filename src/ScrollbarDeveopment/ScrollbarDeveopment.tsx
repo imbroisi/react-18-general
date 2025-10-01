@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import './ScrollbarDeveopment.css';
 import { useBlockThumbDrag } from '../hooks/useBlockThumbDrag';
 
@@ -7,16 +7,37 @@ export interface ScrollbarDeveopmentProps {
 }
 
 const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
-  // const contentRef = useRef<HTMLDivElement>(null);
-  // const scrollPositionRef = useRef({ x: 0, y: 0 });
-  const testScrollRef = useRef<HTMLDivElement>(null); // New ref for hook test
+  const testScrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   
-  // ScrollTo commands (one-time scroll commands)
-  // const [scrollToV, setScrollToV] = useState<number | undefined>(undefined);
-  // const [scrollToH, setScrollToH] = useState<number | undefined>(undefined);
+  // State for parent-controlled scrolling
+  const [scrollPosition, setScrollPosition] = useState({ top: 0, left: 0 });
+  const [thumbPosition, setThumbPosition] = useState({ scrollTop: 0, scrollLeft: 0, scrollPercentageV: 0, scrollPercentageH: 0 });
 
-  // Apply the hook to the test scroll area
-  useBlockThumbDrag(testScrollRef, { enabled: true, debug: true });
+  // Handle thumb movements from the hook
+  const handleThumbMove = (position: { scrollTop: number; scrollLeft: number; scrollPercentageV: number; scrollPercentageH: number }) => {
+    console.log('🎯 Parent received thumb move:', position);
+    
+    // Update thumb position state
+    setThumbPosition(position);
+    
+    // Parent controls the actual content scrolling
+    setScrollPosition({ top: position.scrollTop, left: position.scrollLeft });
+    
+    // Apply the scroll to the content element
+    if (contentRef.current) {
+      contentRef.current.style.transform = `translate(-${position.scrollLeft}px, -${position.scrollTop}px)`;
+    }
+  };
+
+  // Apply the hook with parent control
+  useBlockThumbDrag(testScrollRef, { 
+    enabled: true, 
+    debug: true,
+    onThumbMove: handleThumbMove,
+    allowWheelScroll: false,  // Block wheel scroll - parent controls everything
+    allowKeyboardScroll: false  // Block keyboard scroll - parent controls everything
+  });
 
   // const handleVerticalThumbMove = (position: { scrollTop: number; scrollPercentage: number }) => {
   //   if (contentRef.current) {
@@ -100,7 +121,25 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
 
       {/* Hook Test Area - useBlockThumbDrag */}
       <div style={{ marginTop: '20px' }}>
-        <h3>useBlockThumbDrag Hook Test - Windows Only (No wrapper interference):</h3>
+        <h3>🎛️ Parent-Controlled Scrolling - Thumb Movement Capture:</h3>
+        
+        {/* Parent Control Info Panel */}
+        <div style={{ 
+          marginBottom: '20px', 
+          padding: '15px', 
+          backgroundColor: '#e8f4fd', 
+          border: '1px solid #3498db',
+          borderRadius: '8px',
+          fontFamily: 'monospace'
+        }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>📊 Parent Control Dashboard:</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', color: '#2c3e50' }}>
+            <div><strong>Scroll Position:</strong> {scrollPosition.top.toFixed(0)}px, {scrollPosition.left.toFixed(0)}px</div>
+            <div><strong>Thumb Position:</strong> {thumbPosition.scrollTop.toFixed(0)}px, {thumbPosition.scrollLeft.toFixed(0)}px</div>
+            <div><strong>Vertical %:</strong> {thumbPosition.scrollPercentageV.toFixed(1)}%</div>
+            <div><strong>Horizontal %:</strong> {thumbPosition.scrollPercentageH.toFixed(1)}%</div>
+          </div>
+        </div>
         <div 
           ref={testScrollRef}
           style={{
@@ -113,6 +152,7 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
           }}
         >
           <div 
+            ref={contentRef}
             style={{
               width: '1400px',
               height: '800px',
@@ -120,22 +160,23 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
               padding: '20px',
               fontSize: '18px',
               color: 'white',
-              borderRadius: '8px'
+              borderRadius: '8px',
+              transition: 'transform 0.1s ease-out'
             }}
           >
-            <h2>🎣 Hook-Based Thumb Blocking</h2>
-            <p><strong>✅ No wrapper component interference</strong></p>
-            <p><strong>✅ Uses your existing element and styles</strong></p>
-            <p><strong>✅ Just adds event listeners via hook</strong></p>
+            <h2>🎛️ Parent-Controlled Scrolling</h2>
+            <p><strong>✅ Thumb movements captured and sent to parent</strong></p>
+            <p><strong>✅ Parent has full control over content scrolling</strong></p>
+            <p><strong>✅ No direct scrolling - everything goes through parent</strong></p>
             <p><strong>🪟 Windows scrollbar detection only</strong></p>
             
-            <h3>Test different scroll methods:</h3>
+            <h3>How it works:</h3>
             <ul>
-              <li><strong>✅ Mouse wheel over content</strong> (should work)</li>
-              <li><strong>❌ Dragging scrollbar thumb</strong> (should be blocked)</li>
-              <li><strong>✅ Arrow keys</strong> (should work)</li>
-              <li><strong>✅ Page Up/Down keys</strong> (should work)</li>
-              <li><strong>❌ Clicking scrollbar track</strong> (should be blocked)</li>
+              <li><strong>🎯 Drag scrollbar thumb</strong> → Parent receives position data</li>
+              <li><strong>🎛️ Parent controls content</strong> → Content moves via transform</li>
+              <li><strong>❌ Mouse wheel blocked</strong> → Parent has full control</li>
+              <li><strong>❌ Keyboard scroll blocked</strong> → Parent has full control</li>
+              <li><strong>📊 Real-time feedback</strong> → Dashboard shows all data</li>
             </ul>
             
             <div style={{ marginTop: '100px', padding: '20px', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
