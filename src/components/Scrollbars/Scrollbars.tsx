@@ -50,19 +50,19 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
   const availableViewportWidth = containerWidth - scrollbarSpaceV;
 
   const verticalThumbHeight = needsVerticalScrollbar
-    ? Math.max(20, (availableViewportHeight / contentHeight) * (originalContainerHeight - (needsHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0) - 2 * SCROLLBAR_CONFIG.arrowSize))
+    ? Math.max(20, (availableViewportHeight / contentHeight) * (originalContainerHeight - scrollbarSpaceH - 2 * SCROLLBAR_CONFIG.arrowSize))
     : 0;
 
   const horizontalThumbWidth = needsHorizontalScrollbar
-    ? Math.max(20, (availableViewportWidth / contentWidth) * (originalContainerWidth - (needsVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0) - 2 * SCROLLBAR_CONFIG.arrowSize))
+    ? Math.max(20, (availableViewportWidth / contentWidth) * (originalContainerWidth - scrollbarSpaceV - 2 * SCROLLBAR_CONFIG.arrowSize))
     : 0;
 
   const verticalThumbTop = needsVerticalScrollbar
-    ? (scrollTop / (contentHeight - availableViewportHeight)) * (originalContainerHeight - verticalThumbHeight - (needsHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0) - 2 * SCROLLBAR_CONFIG.arrowSize)
+    ? (scrollTop / (contentHeight - availableViewportHeight)) * (originalContainerHeight - verticalThumbHeight - scrollbarSpaceH - 2 * SCROLLBAR_CONFIG.arrowSize)
     : 0;
 
   const horizontalThumbLeft = needsHorizontalScrollbar
-    ? (scrollLeft / (contentWidth - availableViewportWidth)) * (originalContainerWidth - horizontalThumbWidth - (needsVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0) - 2 * SCROLLBAR_CONFIG.arrowSize)
+    ? (scrollLeft / (contentWidth - availableViewportWidth)) * (originalContainerWidth - horizontalThumbWidth - scrollbarSpaceV - 2 * SCROLLBAR_CONFIG.arrowSize)
     : 0;
 
   // Update dimensions
