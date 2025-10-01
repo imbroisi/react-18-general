@@ -8,7 +8,7 @@ export interface ScrollbarsProps {
   children: React.ReactNode;
   onHThumbMove?: (position: { scrollLeft: number; scrollPercentage: number }) => void;
   onVThumbMove?: (position: { scrollTop: number; scrollPercentage: number }) => void;
-  mode?: 'normal' | 'alwaysPresent';
+  mode?: 'normal' | 'alwaysPresent' | 'invisible';
   scrollToVertical?: number;    // Scroll to vertical position (one-time command)
   scrollToHorizontal?: number;  // Scroll to horizontal position (one-time command)
 }
@@ -36,16 +36,18 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
   const needsVerticalScrollbar = contentHeight > containerHeight;
   const needsHorizontalScrollbar = contentWidth > containerWidth;
 
-  // In alwaysPresent mode, always show scrollbars
-  const showVerticalScrollbar = mode === 'alwaysPresent' || needsVerticalScrollbar;
-  const showHorizontalScrollbar = mode === 'alwaysPresent' || needsHorizontalScrollbar;
+  // In alwaysPresent mode, always show scrollbars. In invisible mode, never show scrollbars
+  const showVerticalScrollbar = mode === 'invisible' ? false : (mode === 'alwaysPresent' || needsVerticalScrollbar);
+  const showHorizontalScrollbar = mode === 'invisible' ? false : (mode === 'alwaysPresent' || needsHorizontalScrollbar);
 
   const originalContainerHeight = containerRef.current ? containerRef.current.clientHeight : containerHeight;
   const originalContainerWidth = containerRef.current ? containerRef.current.clientWidth : containerWidth;
 
-  // Always account for scrollbar space in viewport calculations
-  const availableViewportHeight = containerHeight - (showHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0);
-  const availableViewportWidth = containerWidth - (showVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+  // Account for scrollbar space in viewport calculations (except in invisible mode)
+  const scrollbarSpaceV = (showVerticalScrollbar && mode !== 'invisible') ? SCROLLBAR_CONFIG.width : 0;
+  const scrollbarSpaceH = (showHorizontalScrollbar && mode !== 'invisible') ? SCROLLBAR_CONFIG.width : 0;
+  const availableViewportHeight = containerHeight - scrollbarSpaceH;
+  const availableViewportWidth = containerWidth - scrollbarSpaceV;
 
   const verticalThumbHeight = needsVerticalScrollbar
     ? Math.max(20, (availableViewportHeight / contentHeight) * (originalContainerHeight - (needsHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0) - 2 * SCROLLBAR_CONFIG.arrowSize))
@@ -81,8 +83,8 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
   // Handle scroll
   const handleScroll = useCallback((newScrollTop: number, newScrollLeft: number) => {
     // Calculate available viewport space (excluding scrollbars) - use show variables for alwaysVisible mode
-    const availableHeight = containerHeight - (showHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0);
-    const availableWidth = containerWidth - (showVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+    const availableHeight = containerHeight - scrollbarSpaceH;
+    const availableWidth = containerWidth - scrollbarSpaceV;
 
     const maxScrollTop = Math.max(0, contentHeight - availableHeight);
     const maxScrollLeft = Math.max(0, contentWidth - availableWidth);
@@ -110,7 +112,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
         scrollPercentage
       });
     }
-  }, [contentHeight, containerHeight, contentWidth, containerWidth, showHorizontalScrollbar, showVerticalScrollbar, onVThumbMove, onHThumbMove, scrollTop, scrollLeft]);
+  }, [contentHeight, containerHeight, contentWidth, containerWidth, scrollbarSpaceH, scrollbarSpaceV, onVThumbMove, onHThumbMove, scrollTop, scrollLeft]);
 
   // Mouse wheel handler - convert wheel events to thumb movements
   const handleWheel = useCallback((e: WheelEvent) => {
@@ -167,11 +169,11 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
     const clickY = e.clientY - rect.top - SCROLLBAR_CONFIG.arrowSize;
     const trackHeight = rect.height - (2 * SCROLLBAR_CONFIG.arrowSize);
     const scrollRatio = clickY / trackHeight;
-    const availableHeight = containerHeight - (showHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+    const availableHeight = containerHeight - scrollbarSpaceH;
     const newScrollTop = scrollRatio * (contentHeight - availableHeight);
 
     handleScroll(newScrollTop, scrollLeft);
-  }, [contentHeight, containerHeight, showHorizontalScrollbar, scrollLeft, handleScroll]);
+  }, [contentHeight, containerHeight, scrollbarSpaceH, scrollLeft, handleScroll]);
 
   const handleHorizontalTrackClick = useCallback((e: React.MouseEvent) => {
     if (e.target === horizontalThumbRef.current) return;
@@ -180,29 +182,29 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
     const clickX = e.clientX - rect.left - SCROLLBAR_CONFIG.arrowSize;
     const trackWidth = rect.width - (2 * SCROLLBAR_CONFIG.arrowSize);
     const scrollRatio = clickX / trackWidth;
-    const availableWidth = containerWidth - (showVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+    const availableWidth = containerWidth - scrollbarSpaceV;
     const newScrollLeft = scrollRatio * (contentWidth - availableWidth);
 
     handleScroll(scrollTop, newScrollLeft);
-  }, [contentWidth, containerWidth, showVerticalScrollbar, scrollTop, handleScroll]);
+  }, [contentWidth, containerWidth, scrollbarSpaceV, scrollTop, handleScroll]);
 
   // Global mouse move and up handlers
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDraggingVertical) {
         const deltaY = e.clientY - dragStartY;
-        const trackHeight = originalContainerHeight - (2 * SCROLLBAR_CONFIG.arrowSize) - (showHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+        const trackHeight = originalContainerHeight - (2 * SCROLLBAR_CONFIG.arrowSize) - scrollbarSpaceH;
         const scrollRatio = deltaY / (trackHeight - verticalThumbHeight);
-        const availableHeight = containerHeight - (showHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+        const availableHeight = containerHeight - scrollbarSpaceH;
         const newScrollTop = dragStartScrollTop + scrollRatio * (contentHeight - availableHeight);
         handleScroll(newScrollTop, scrollLeft);
       }
 
       if (isDraggingHorizontal) {
         const deltaX = e.clientX - dragStartX;
-        const trackWidth = originalContainerWidth - (2 * SCROLLBAR_CONFIG.arrowSize) - (showVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+        const trackWidth = originalContainerWidth - (2 * SCROLLBAR_CONFIG.arrowSize) - scrollbarSpaceV;
         const scrollRatio = deltaX / (trackWidth - horizontalThumbWidth);
-        const availableWidth = containerWidth - (showVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+        const availableWidth = containerWidth - scrollbarSpaceV;
         const newScrollLeft = dragStartScrollLeft + scrollRatio * (contentWidth - availableWidth);
         handleScroll(scrollTop, newScrollLeft);
       }
@@ -225,7 +227,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
     isDraggingVertical, isDraggingHorizontal, dragStartY, dragStartX,
     dragStartScrollTop, dragStartScrollLeft, originalContainerHeight, originalContainerWidth,
     verticalThumbHeight, horizontalThumbWidth, contentHeight, contentWidth,
-    scrollTop, scrollLeft, handleScroll, showHorizontalScrollbar, showVerticalScrollbar,
+    scrollTop, scrollLeft, handleScroll, scrollbarSpaceH, scrollbarSpaceV,
     containerHeight, containerWidth
   ]);
 
@@ -241,7 +243,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
   // Handle scrollTo commands (one-time scroll commands)
   useEffect(() => {
     if (scrollToVertical !== undefined) {
-      const availableHeight = containerHeight - (showHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+      const availableHeight = containerHeight - scrollbarSpaceH;
       const maxScrollTop = Math.max(0, contentHeight - availableHeight);
       const clampedScrollTop = Math.max(0, Math.min(maxScrollTop, scrollToVertical));
 
@@ -256,11 +258,11 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
         });
       }
     }
-  }, [scrollToVertical, containerHeight, contentHeight, showHorizontalScrollbar, onVThumbMove]);
+  }, [scrollToVertical, containerHeight, contentHeight, scrollbarSpaceH, onVThumbMove]);
 
   useEffect(() => {
     if (scrollToHorizontal !== undefined) {
-      const availableWidth = containerWidth - (showVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0);
+      const availableWidth = containerWidth - scrollbarSpaceV;
       const maxScrollLeft = Math.max(0, contentWidth - availableWidth);
       const clampedScrollLeft = Math.max(0, Math.min(maxScrollLeft, scrollToHorizontal));
 
@@ -275,7 +277,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
         });
       }
     }
-  }, [scrollToHorizontal, containerWidth, contentWidth, showVerticalScrollbar, onHThumbMove]);
+  }, [scrollToHorizontal, containerWidth, contentWidth, scrollbarSpaceV, onHThumbMove]);
 
   // Update dimensions on mount and resize
   useEffect(() => {
@@ -313,8 +315,8 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
           position: 'absolute',
           top: 0,
           left: 0,
-          right: showVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0,
-          bottom: showHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0,
+          right: scrollbarSpaceV,
+          bottom: scrollbarSpaceH,
           overflow: 'hidden'
         }}
       >
@@ -340,7 +342,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
             top: 0,
             right: 0,
             width: SCROLLBAR_CONFIG.width,
-            height: originalContainerHeight - (showHorizontalScrollbar ? SCROLLBAR_CONFIG.width : 0),
+            height: originalContainerHeight - scrollbarSpaceH,
             backgroundColor: SCROLLBAR_CONFIG.backgroundColor
           }}
           onClick={needsVerticalScrollbar ? handleVerticalTrackClick : undefined}
@@ -368,7 +370,6 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
               />
 
               <Arrow bottom onClick={handleVerticalArrowDown} />
-
             </>
           )}
         </div>
@@ -382,7 +383,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
             position: 'absolute',
             bottom: 0,
             left: 0,
-            width: originalContainerWidth - (showVerticalScrollbar ? SCROLLBAR_CONFIG.width : 0),
+            width: originalContainerWidth - scrollbarSpaceV,
             height: SCROLLBAR_CONFIG.width,
             backgroundColor: SCROLLBAR_CONFIG.backgroundColor,
             overflow: 'visible'
