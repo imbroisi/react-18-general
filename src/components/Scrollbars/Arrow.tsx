@@ -49,7 +49,7 @@ const Arrow = (props: ArrowProps) => {
     </svg>
   );
 
-  const className = `scrollbar-arrow scrollbar-arrow-${right ? 'right' : top ? 'top' : left ? 'left' : 'bottom'}`;
+  const className = `use-scroll-manager-arrow use-scroll-manager-arrow-${right ? 'right' : top ? 'top' : left ? 'left' : 'bottom'}`;
   return (
     <div
       className={className}

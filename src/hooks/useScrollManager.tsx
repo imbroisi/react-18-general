@@ -307,7 +307,7 @@ export const useScrollManager = (
 
     return (
       <div
-        className="scrollbar-vertical"
+        className="use-scroll-manager-vertical"
         style={{
           position: 'absolute',
           top: 0,
@@ -328,7 +328,7 @@ export const useScrollManager = (
             {/* Thumb */}
             <div
               ref={verticalThumbRef}
-              className="scrollbar-thumb scrollbar-thumb-vertical"
+              className="use-scroll-manager-thumb use-scroll-manager-thumb-vertical"
               style={{
                 position: 'absolute',
                 top: SCROLLBAR_CONFIG.arrowSize + verticalThumbTop,
@@ -356,7 +356,7 @@ export const useScrollManager = (
 
     return (
       <div
-        className="scrollbar-horizontal"
+        className="use-scroll-manager-horizontal"
         style={{
           position: 'absolute',
           bottom: 0,
@@ -378,7 +378,7 @@ export const useScrollManager = (
             {/* Thumb */}
             <div
               ref={horizontalThumbRef}
-              className="scrollbar-thumb scrollbar-thumb-horizontal"
+              className="use-scroll-manager-thumb use-scroll-manager-thumb-horizontal"
               style={{
                 position: 'absolute',
                 left: SCROLLBAR_CONFIG.arrowSize + horizontalThumbLeft,

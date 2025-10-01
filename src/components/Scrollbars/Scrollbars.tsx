@@ -301,7 +301,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
   return (
     <div
       ref={containerRef}
-      className="scrollbars-container"
+      className="use-scroll-manager-container"
       style={{
         position: 'relative',
         overflow: 'hidden',
@@ -322,7 +322,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
       >
         <div
           ref={contentRef}
-          className="scrollbars-content"
+          className="use-scroll-manager-content"
           style={{
             position: 'absolute',
             top: 0,
@@ -336,7 +336,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
       {/* Vertical Scrollbar */}
       {showVerticalScrollbar && (
         <div
-          className="scrollbar-vertical"
+          className="use-scroll-manager-vertical"
           style={{
             position: 'absolute',
             top: 0,
@@ -355,7 +355,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
               {/* Thumb Vertical */}
               <div
                 ref={verticalThumbRef}
-                className="scrollbar-thumb scrollbar-thumb-vertical"
+                className="use-scroll-manager-thumb use-scroll-manager-thumb-vertical"
                 style={{
                   position: 'absolute',
                   top: SCROLLBAR_CONFIG.arrowSize + verticalThumbTop,
@@ -378,7 +378,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
       {/* Horizontal Scrollbar */}
       {showHorizontalScrollbar && (
         <div
-          className="scrollbar-horizontal"
+          className="use-scroll-manager-horizontal"
           style={{
             position: 'absolute',
             bottom: 0,
@@ -398,7 +398,7 @@ const ScrollManager: React.FC<ScrollbarsProps> = ({ children, onHThumbMove, onVT
               {/* Thumb Horizontal */}
               <div
                 ref={horizontalThumbRef}
-                className="scrollbar-thumb scrollbar-thumb-horizontal"
+                className="use-scroll-manager-thumb use-scroll-manager-thumb-horizontal"
                 style={{
                   position: 'absolute',
                   left: SCROLLBAR_CONFIG.arrowSize + horizontalThumbLeft,

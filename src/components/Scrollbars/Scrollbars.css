@@ -1,22 +1,22 @@
 /* Scrollbar hover and active states */
-.scrollbar-thumb:hover {
+.use-scroll-manager-thumb:hover {
   background-color: #a8a8a8 !important;
 }
 
-.scrollbar-thumb:active {
+.use-scroll-manager-thumb:active {
   background-color: #787878 !important;
 }
 
-.scrollbar-arrow:hover {
+.use-scroll-manager-arrow:hover {
   background-color: #e8eaed !important;
 }
 
-.scrollbar-arrow:active {
+.use-scroll-manager-arrow:active {
   background-color: #dadce0 !important;
 }
 
 /* Prevent text selection during drag */
-.scrollbars-container * {
+.use-scroll-manager-container * {
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -24,10 +24,10 @@
 }
 
 /* Smooth transitions */
-.scrollbar-thumb {
+.use-scroll-manager-thumb {
   transition: background-color 0.15s ease;
 }
 
-.scrollbar-arrow {
+.use-scroll-manager-arrow {
   transition: background-color 0.15s ease;
 }
