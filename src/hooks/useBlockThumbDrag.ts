@@ -102,82 +102,60 @@ export const useBlockThumbDrag = (
 
     // Global mouse move handler during drag
     const handleMouseMove = (e: MouseEvent) => {
-      if (isThumbDraggingRef.current && onThumbMove) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const dragMode = thumbDragModeRef.current;
-        const dragStart = dragStartPositionRef.current;
-        
-        if (dragMode === 'vertical') {
-          // Calculate vertical thumb movement
-          const deltaY = e.clientY - dragStart.mouseY;
-          const scrollbarHeight = element.offsetHeight - element.clientHeight;
-          const trackHeight = element.clientHeight - (2 * 16); // Approximate arrow height
-          
-          // Convert mouse delta to scroll position
-          const scrollRatio = deltaY / trackHeight;
-          const maxScrollTop = element.scrollHeight - element.clientHeight;
-          const newScrollTop = Math.max(0, Math.min(maxScrollTop, dragStart.scrollTop + (scrollRatio * maxScrollTop)));
-          const scrollPercentageV = maxScrollTop > 0 ? (newScrollTop / maxScrollTop) * 100 : 0;
-          
-          if (debug) console.log('🎯 Vertical thumb move:', { newScrollTop, scrollPercentageV });
-          
-          onThumbMove({
-            scrollTop: newScrollTop,
-            scrollLeft: dragStart.scrollLeft,
-            scrollPercentageV,
-            scrollPercentageH: 0
-          });
-          
-        } else if (dragMode === 'horizontal') {
-          // Calculate horizontal thumb movement
-          const deltaX = e.clientX - dragStart.mouseX;
-          const scrollbarWidth = element.offsetWidth - element.clientWidth;
-          const trackWidth = element.clientWidth - (2 * 16); // Approximate arrow width
-          
-          // Convert mouse delta to scroll position
-          const scrollRatio = deltaX / trackWidth;
-          const maxScrollLeft = element.scrollWidth - element.clientWidth;
-          const newScrollLeft = Math.max(0, Math.min(maxScrollLeft, dragStart.scrollLeft + (scrollRatio * maxScrollLeft)));
-          const scrollPercentageH = maxScrollLeft > 0 ? (newScrollLeft / maxScrollLeft) * 100 : 0;
-          
-          if (debug) console.log('🎯 Horizontal thumb move:', { newScrollLeft, scrollPercentageH });
-          
-          onThumbMove({
-            scrollTop: dragStart.scrollTop,
-            scrollLeft: newScrollLeft,
-            scrollPercentageV: 0,
-            scrollPercentageH
-          });
-        }
+      if (isThumbDraggingRef.current) {
+        // Let the browser handle thumb movement naturally
+        // The scroll event will capture the position changes
+        if (debug) console.log('🎯 Mouse move during thumb drag');
       }
     };
 
     // Intercept scroll events
     const handleScroll = (e: Event) => {
-      const shouldBlockScroll = isThumbDraggingRef.current || 
-                               (!allowWheelScroll && isWheelScrollingRef.current) ||
-                               (!allowKeyboardScroll && isKeyboardScrollingRef.current);
-      
-      if (shouldBlockScroll) {
-        // Block scrolling and restore position
-        if (debug) {
-          if (isThumbDraggingRef.current) console.log('🚫 Blocking thumb scroll - restoring position');
-          if (!allowWheelScroll && isWheelScrollingRef.current) console.log('🚫 Blocking wheel scroll');
-          if (!allowKeyboardScroll && isKeyboardScrollingRef.current) console.log('🚫 Blocking keyboard scroll');
+      if (isThumbDraggingRef.current) {
+        // Allow thumb scrolling to update scrollbar position, but notify parent
+        if (debug) console.log('🎯 Thumb scroll detected - notifying parent');
+        
+        if (onThumbMove) {
+          const maxScrollTop = element.scrollHeight - element.clientHeight;
+          const maxScrollLeft = element.scrollWidth - element.clientWidth;
+          const scrollPercentageV = maxScrollTop > 0 ? (element.scrollTop / maxScrollTop) * 100 : 0;
+          const scrollPercentageH = maxScrollLeft > 0 ? (element.scrollLeft / maxScrollLeft) * 100 : 0;
+          
+          onThumbMove({
+            scrollTop: element.scrollTop,
+            scrollLeft: element.scrollLeft,
+            scrollPercentageV,
+            scrollPercentageH
+          });
         }
-        element.scrollTop = lastValidScrollPositionRef.current.top;
-        element.scrollLeft = lastValidScrollPositionRef.current.left;
-      } else {
-        // Allow scrolling and update position
+        
+        // Update last valid position
         lastValidScrollPositionRef.current = {
           top: element.scrollTop,
           left: element.scrollLeft
         };
+      } else {
+        // Block wheel and keyboard scrolling if not allowed
+        const shouldBlockScroll = (!allowWheelScroll && isWheelScrollingRef.current) ||
+                                 (!allowKeyboardScroll && isKeyboardScrollingRef.current);
         
-        if (debug && isWheelScrollingRef.current) console.log('✅ Wheel scroll allowed');
-        if (debug && isKeyboardScrollingRef.current) console.log('✅ Keyboard scroll allowed');
+        if (shouldBlockScroll) {
+          if (debug) {
+            if (!allowWheelScroll && isWheelScrollingRef.current) console.log('🚫 Blocking wheel scroll');
+            if (!allowKeyboardScroll && isKeyboardScrollingRef.current) console.log('🚫 Blocking keyboard scroll');
+          }
+          element.scrollTop = lastValidScrollPositionRef.current.top;
+          element.scrollLeft = lastValidScrollPositionRef.current.left;
+        } else {
+          // Allow scrolling and update position
+          lastValidScrollPositionRef.current = {
+            top: element.scrollTop,
+            left: element.scrollLeft
+          };
+          
+          if (debug && isWheelScrollingRef.current) console.log('✅ Wheel scroll allowed');
+          if (debug && isKeyboardScrollingRef.current) console.log('✅ Keyboard scroll allowed');
+        }
       }
       
       // Reset flags

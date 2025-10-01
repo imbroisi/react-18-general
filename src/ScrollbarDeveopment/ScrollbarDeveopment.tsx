@@ -148,9 +148,13 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
             border: '2px solid purple',
             overflow: 'auto',
             padding: '10px',
-            backgroundColor: '#f9f9f9'
+            backgroundColor: '#f9f9f9',
+            position: 'relative'
           }}
         >
+          {/* Invisible spacer to create scrollable area */}
+          <div style={{ width: '1400px', height: '800px', visibility: 'hidden', pointerEvents: 'none' }} />
+          
           <div 
             ref={contentRef}
             style={{
@@ -161,6 +165,9 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
               fontSize: '18px',
               color: 'white',
               borderRadius: '8px',
+              position: 'absolute',
+              top: '10px',
+              left: '10px',
               transition: 'transform 0.1s ease-out'
             }}
           >
