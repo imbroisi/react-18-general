@@ -55,7 +55,7 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
   useBlockThumbDrag(testScrollRef, { 
     enabled: true, 
     debug: true,
-    onThumbMove: handleThumbMove,
+    onThumbMove: handleThumbMove, // Always pass callback, but handle conditionally inside
     allowWheelScroll: false,  // Block wheel scroll - parent controls everything
     allowKeyboardScroll: false  // Block keyboard scroll - parent controls everything
   });
@@ -231,14 +231,20 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
             position: 'relative'
           }}
         >
-          {/* Invisible spacer to create scrollable area */}
-          <div style={{ width: '1400px', height: '800px', visibility: 'hidden', pointerEvents: 'none' }} />
+          {/* Invisible spacer to create scrollable area - this is what the scrollbar tracks */}
+          <div style={{ 
+            width: '1400px', 
+            height: '800px', 
+            visibility: 'hidden', 
+            pointerEvents: 'none',
+            position: 'relative'
+          }} />
           
           <div 
             ref={contentRef}
             style={{
-              width: '1400px',
-              height: '800px',
+              width: '1380px', // Slightly smaller to account for padding
+              height: '780px',
               background: 'linear-gradient(45deg, #8e44ad, #3498db, #e67e22, #27ae60)',
               padding: '20px',
               fontSize: '18px',
@@ -247,7 +253,9 @@ const ScrollbarDeveopment = (props: ScrollbarDeveopmentProps) => {
               position: 'absolute',
               top: '10px',
               left: '10px',
-              transition: 'transform 0.1s ease-out'
+              transition: 'transform 0.1s ease-out',
+              pointerEvents: 'auto', // Allow interaction with content
+              overflow: 'hidden' // Prevent content from creating its own scrollbars
             }}
           >
             <h2>🎛️ Parent-Controlled Scrolling</h2>

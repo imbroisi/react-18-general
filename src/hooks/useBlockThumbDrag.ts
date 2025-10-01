@@ -112,28 +112,35 @@ export const useBlockThumbDrag = (
     // Intercept scroll events
     const handleScroll = (e: Event) => {
       if (isThumbDraggingRef.current) {
-        // Allow thumb scrolling to update scrollbar position, but notify parent
-        if (debug) console.log('🎯 Thumb scroll detected - notifying parent');
+        // Capture thumb position but always restore to prevent native scrolling
+        if (debug) console.log('🎯 Thumb scroll detected - capturing position');
+        
+        const currentScrollTop = element.scrollTop;
+        const currentScrollLeft = element.scrollLeft;
         
         if (onThumbMove) {
           const maxScrollTop = element.scrollHeight - element.clientHeight;
           const maxScrollLeft = element.scrollWidth - element.clientWidth;
-          const scrollPercentageV = maxScrollTop > 0 ? (element.scrollTop / maxScrollTop) * 100 : 0;
-          const scrollPercentageH = maxScrollLeft > 0 ? (element.scrollLeft / maxScrollLeft) * 100 : 0;
+          const scrollPercentageV = maxScrollTop > 0 ? (currentScrollTop / maxScrollTop) * 100 : 0;
+          const scrollPercentageH = maxScrollLeft > 0 ? (currentScrollLeft / maxScrollLeft) * 100 : 0;
           
           onThumbMove({
-            scrollTop: element.scrollTop,
-            scrollLeft: element.scrollLeft,
+            scrollTop: currentScrollTop,
+            scrollLeft: currentScrollLeft,
             scrollPercentageV,
             scrollPercentageH
           });
         }
         
-        // Update last valid position
-        lastValidScrollPositionRef.current = {
-          top: element.scrollTop,
-          left: element.scrollLeft
-        };
+        // Always restore to last valid position to prevent native scrolling
+        // Use setTimeout to allow the scroll event to complete first
+        setTimeout(() => {
+          if (element) {
+            element.scrollTop = lastValidScrollPositionRef.current.top;
+            element.scrollLeft = lastValidScrollPositionRef.current.left;
+          }
+        }, 0);
+        
       } else {
         // Block wheel and keyboard scrolling if not allowed
         const shouldBlockScroll = (!allowWheelScroll && isWheelScrollingRef.current) ||
