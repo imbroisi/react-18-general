@@ -106,8 +106,15 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     if (maxTop <= 0) return;
     const thumbHeight = Math.max(20, (viewport / content) * trackHeight);
     const scrollArea = trackHeight - thumbHeight;
+    
+    // Account for thumb positioning constraints
+    const minThumbTop = 100;
+    const bottomMargin = 8;
+    const maxThumbTop = scrollArea - bottomMargin;
+    const availableThumbArea = maxThumbTop - minThumbTop;
+    
     const deltaY = e.clientY - dragStartRef.current.y;
-    const nextTop = Math.max(0, Math.min(maxTop, dragStartRef.current.scrollTop + (deltaY * (maxTop / scrollArea))));
+    const nextTop = Math.max(0, Math.min(maxTop, dragStartRef.current.scrollTop + (deltaY * (maxTop / availableThumbArea))));
     setScrollPosition(prev => ({ ...prev, top: nextTop }));
     // Notifica scroll do usuário
     options?.onUserScroll?.({ position: { top: nextTop, left: scrollPosition.left }, maxScroll });
