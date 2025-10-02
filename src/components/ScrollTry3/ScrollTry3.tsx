@@ -1,6 +1,6 @@
-import React, { useRef, useCallback } from 'react';
+import React from 'react';
 import ScrollableContent from './ScrollableContent';
-import ControlledScrollView, { ControlledScrollViewHandle } from './ControlledScrollView';
+import { useControlledScroll } from '../../hooks/useControlledScroll';
 import './ScrollTry3.css';
 
 const SCROLLBAR_WIDTH = 12;
@@ -9,43 +9,61 @@ export interface ScrollTry3Props {
 
 }
 
-const ScrollTry3 = (props: ScrollTry3Props) => {
-  const ref1 = useRef<ControlledScrollViewHandle>(null);
-  const ref2 = useRef<ControlledScrollViewHandle>(null);
-
-  const onUserScroll1 = useCallback(({ position, maxScroll }: { position: { top: number; left: number }; maxScroll: { top: number; left: number } }) => {
-    const r2 = ref2.current;
-    if (!r2) return;
-    const max2 = r2.getMaxScroll();
-    if (maxScroll.top > 0 && max2.top > 0) {
-      const ratio = position.top / maxScroll.top;
-      r2.setScrollPosition({ top: ratio * max2.top, left: 0 });
+const Inner: React.FC = () => {
+  const container1 = useControlledScroll({
+    onUserScroll: ({ position, maxScroll }) => {
+      if (maxScroll.top > 0 && container2.maxScroll.top > 0) {
+        const ratio = position.top / maxScroll.top;
+        container2.applyPosition(ratio * container2.maxScroll.top, 0);
+      }
     }
-  }, []);
-
-  const onUserScroll2 = useCallback(({ position, maxScroll }: { position: { top: number; left: number }; maxScroll: { top: number; left: number } }) => {
-    const r1 = ref1.current;
-    if (!r1) return;
-    const max1 = r1.getMaxScroll();
-    if (maxScroll.top > 0 && max1.top > 0) {
-      const ratio = position.top / maxScroll.top;
-      r1.setScrollPosition({ top: ratio * max1.top, left: 0 });
+  });
+  const container2 = useControlledScroll({
+    onUserScroll: ({ position, maxScroll }) => {
+      if (maxScroll.top > 0 && container1.maxScroll.top > 0) {
+        const ratio = position.top / maxScroll.top;
+        container1.applyPosition(ratio * container1.maxScroll.top, 0);
+      }
     }
-  }, []);
+  });
 
+  // Hoisted styles to avoid recreating objects on every render
+  const rowStyle: React.CSSProperties = { display: 'flex', gap: '50px', width: '100%' };
+  const paneStyle: React.CSSProperties = { margin: '20px', overflow: 'hidden', position: 'relative', paddingRight: SCROLLBAR_WIDTH, height: 'calc(100vh - 40px)', minWidth: '400px', flex: '1' };
+
+  console.log("==>> rendering ScrollTry3");
+  
   return (
     <>
-      <div style={{ display: 'flex', gap: '50px', width: '100%' }}>
-        <ControlledScrollView ref={ref1} onUserScroll={onUserScroll1} scrollbarWidth={SCROLLBAR_WIDTH}>
-          <ScrollableContent />
-        </ControlledScrollView>
+      <div style={rowStyle}>
+        {/* Div scrollável controlada (nativo bloqueado) */}
+        <div
+          ref={container1.scrollableRef}
+          className="scrollable-content"
+          style={paneStyle}
+        >
+          <container1.VerticalScrollbar />
 
-        <ControlledScrollView ref={ref2} onUserScroll={onUserScroll2} scrollbarWidth={SCROLLBAR_WIDTH}>
-          <ScrollableContent />
-        </ControlledScrollView>
+          <div ref={container1.contentRef} className="scrollable-inner" style={{ zIndex: 1 }}>
+            <ScrollableContent />
+          </div>
+        </div>
+
+        {/* Segundo container */}
+        <div
+          ref={container2.scrollableRef}
+          className="scrollable-content"
+          style={paneStyle}
+        >
+          <container2.VerticalScrollbar />
+
+          <div ref={container2.contentRef} className="scrollable-inner" style={{ zIndex: 1 }}>
+            <ScrollableContent />
+          </div>
+        </div>
       </div>
     </>
   );
-}
+};
 
-export default ScrollTry3;
+export default React.memo(Inner);

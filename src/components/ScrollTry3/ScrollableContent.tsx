@@ -33,6 +33,6 @@ const ScrollableContent: React.FC = () => {
   );
 };
 
-export default ScrollableContent;
+export default React.memo(ScrollableContent);
 
 

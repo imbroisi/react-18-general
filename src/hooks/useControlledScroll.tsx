@@ -34,6 +34,31 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
   const dragStartRef = useRef({ y: 0, scrollTop: 0 });
   const isDraggingRef = useRef(false);
 
+  const applyPosition = (top: number, left: number) => {
+    const limitsTop = Math.max(0, contentSize.height - containerSize.height);
+    const limitsLeft = Math.max(0, contentSize.width - containerSize.width);
+    const clampedTop = Math.max(0, Math.min(limitsTop, top));
+    const clampedLeft = Math.max(0, Math.min(limitsLeft, left));
+    if (contentRef.current) {
+      contentRef.current.style.transform = `translate3d(-${clampedLeft}px, -${clampedTop}px, 0)`;
+    }
+    if (thumbRef.current) {
+      const trackHeight = containerSize.height;
+      const viewport = containerSize.height;
+      const content = contentSize.height;
+      const maxTopLocal = Math.max(0, content - viewport);
+      const thumbHeight = Math.max(THUMB_HEIGHT, (viewport > 0 && content > 0) ? (viewport / content) * trackHeight : 0);
+      const scrollArea = Math.max(0, trackHeight - thumbHeight);
+      const topMargin = THUMB_TOP_MARGIN;
+      const bottomMargin = THUMB_BOTTOM_MARGIN;
+      const maxThumbTop = scrollArea - bottomMargin;
+      const proportion = maxTopLocal > 0 ? (clampedTop / maxTopLocal) : 0;
+      const computedThumbTop = Math.min(maxThumbTop, topMargin + proportion * (maxThumbTop - topMargin));
+      thumbRef.current.style.top = `${computedThumbTop}px`;
+    }
+    scrollPosRef.current = { top: clampedTop, left: clampedLeft };
+  };
+
   // Controlled transform application - optimized for smooth updates
   useEffect(() => {
     if (!contentRef.current) return;
@@ -108,7 +133,25 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
           const nextLeft = Math.max(0, Math.min(limits.left, current.left + dx));
 
           if (nextTop !== current.top || nextLeft !== current.left) {
-            setScrollPosition({ top: nextTop, left: nextLeft });
+            // Immediate DOM updates to avoid rerendering the parent
+            if (contentRef.current) {
+              contentRef.current.style.transform = `translate3d(-${nextLeft}px, -${nextTop}px, 0)`;
+            }
+            if (thumbRef.current) {
+              const trackHeight = containerSize.height;
+              const viewport = containerSize.height;
+              const content = contentSize.height;
+              const maxTopLocal = Math.max(0, content - viewport);
+              const thumbHeight = Math.max(THUMB_HEIGHT, (viewport > 0 && content > 0) ? (viewport / content) * trackHeight : 0);
+              const scrollArea = Math.max(0, trackHeight - thumbHeight);
+              const topMargin = THUMB_TOP_MARGIN;
+              const bottomMargin = THUMB_BOTTOM_MARGIN;
+              const maxThumbTop = scrollArea - bottomMargin;
+              const proportion = maxTopLocal > 0 ? (nextTop / maxTopLocal) : 0;
+              const computedThumbTop = Math.min(maxThumbTop, topMargin + proportion * (maxThumbTop - topMargin));
+              thumbRef.current.style.top = `${computedThumbTop}px`;
+            }
+            scrollPosRef.current = { top: nextTop, left: nextLeft };
             // Notify only when top actually changes to avoid redundant feedback
             if (nextTop !== lastNotifiedTopRef.current) {
               options?.onUserScroll?.({ position: { top: nextTop, left: nextLeft }, maxScroll: limits });
@@ -126,7 +169,7 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
         wheelRafIdRef.current = null;
       }
     };
-  }, [scrollableRef, options]);
+  }, [scrollableRef, options, containerSize.height, contentSize.height]);
 
   // Prevent native scroll from container (safety)
   useEffect(() => {
@@ -145,7 +188,7 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
   const onThumbMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     isDraggingRef.current = true;
-    dragStartRef.current = { y: e.clientY, scrollTop: scrollPosition.top };
+    dragStartRef.current = { y: e.clientY, scrollTop: scrollPosRef.current.top };
     document.addEventListener('mousemove', onThumbMouseMove);
     document.addEventListener('mouseup', onThumbMouseUp);
     // UX: indicate dragging and reduce selection jank
@@ -185,10 +228,9 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
         thumbRef.current.style.top = `${computedThumbTop}px`;
       }
       
-      // Batch the state update
-      setScrollPosition(prev => ({ ...prev, top: nextTop }));
-      // Notifica scroll do usuário
-      options?.onUserScroll?.({ position: { top: nextTop, left: scrollPosition.left }, maxScroll });
+      // Update refs and notify (no React state update to avoid parent rerender)
+      scrollPosRef.current = { top: nextTop, left: scrollPosRef.current.left };
+      options?.onUserScroll?.({ position: { top: nextTop, left: scrollPosRef.current.left }, maxScroll });
     });
   };
 
@@ -212,7 +254,7 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
         const topMargin = THUMB_TOP_MARGIN;
     const bottomMargin = THUMB_BOTTOM_MARGIN;
     const maxThumbTop = scrollArea - bottomMargin;
-    const calculatedThumbTop = maxTopLocal > 0 ? (scrollPosition.top / maxTopLocal) * (maxThumbTop - topMargin) : 0;
+    const calculatedThumbTop = maxTopLocal > 0 ? (scrollPosRef.current.top / maxTopLocal) * (maxThumbTop - topMargin) : 0;
     
     const thumbTop = Math.min(maxThumbTop, topMargin + calculatedThumbTop);
 
@@ -256,7 +298,8 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     contentSize,
     onThumbMouseDown,
     isDragging: isDraggingRef.current,
-    VerticalScrollbar
+    VerticalScrollbar,
+    applyPosition
   };
 };
 
