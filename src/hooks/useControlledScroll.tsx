@@ -23,6 +23,13 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [contentSize, setContentSize] = useState({ width: 0, height: 0 });
   
+  // Refs for latest values to avoid stale closures in event handlers
+  const scrollPosRef = useRef({ top: 0, left: 0 });
+  const maxScrollRef = useRef({ top: 0, left: 0 });
+  const lastNotifiedTopRef = useRef(0);
+  const wheelAccumRef = useRef({ dy: 0, dx: 0 });
+  const wheelRafIdRef = useRef<number | null>(null);
+  
   // Drag state handled via ref to avoid stale closures in document listeners
   const dragStartRef = useRef({ y: 0, scrollTop: 0 });
   const isDraggingRef = useRef(false);
@@ -33,6 +40,14 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     // Use transform3d for hardware acceleration
     contentRef.current.style.transform = `translate3d(-${scrollPosition.left}px, -${scrollPosition.top}px, 0)`;
   }, [scrollPosition]);
+  
+  // Keep refs in sync with latest state
+  useEffect(() => {
+    scrollPosRef.current = scrollPosition;
+  }, [scrollPosition]);
+  useEffect(() => {
+    maxScrollRef.current = maxScroll;
+  }, [maxScroll]);
 
   // Measure sizes and compute max scroll
   useEffect(() => {
@@ -70,7 +85,7 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     };
   }, []);
 
-  // Wheel handler (block native and update controlled position)
+  // Wheel handler (block native and update controlled position) with RAF coalescing
   useEffect(() => {
     const containerEl = scrollableRef.current;
     if (!containerEl) return;
@@ -78,15 +93,40 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const nextTop = Math.max(0, Math.min(maxScroll.top, scrollPosition.top + e.deltaY));
-      const nextLeft = Math.max(0, Math.min(maxScroll.left, scrollPosition.left + e.deltaX));
-      setScrollPosition({ top: nextTop, left: nextLeft });
-      // Notifica scroll do usuário
-      options?.onUserScroll?.({ position: { top: nextTop, left: nextLeft }, maxScroll });
+      wheelAccumRef.current.dy += e.deltaY;
+      wheelAccumRef.current.dx += e.deltaX;
+      if (wheelRafIdRef.current == null) {
+        wheelRafIdRef.current = requestAnimationFrame(() => {
+          wheelRafIdRef.current = null;
+          const { dy, dx } = wheelAccumRef.current;
+          wheelAccumRef.current.dy = 0;
+          wheelAccumRef.current.dx = 0;
+
+          const current = scrollPosRef.current;
+          const limits = maxScrollRef.current;
+          const nextTop = Math.max(0, Math.min(limits.top, current.top + dy));
+          const nextLeft = Math.max(0, Math.min(limits.left, current.left + dx));
+
+          if (nextTop !== current.top || nextLeft !== current.left) {
+            setScrollPosition({ top: nextTop, left: nextLeft });
+            // Notify only when top actually changes to avoid redundant feedback
+            if (nextTop !== lastNotifiedTopRef.current) {
+              options?.onUserScroll?.({ position: { top: nextTop, left: nextLeft }, maxScroll: limits });
+              lastNotifiedTopRef.current = nextTop;
+            }
+          }
+        });
+      }
     };
     containerEl.addEventListener('wheel', onWheel, { passive: false });
-    return () => containerEl.removeEventListener('wheel', onWheel);
-  }, [scrollPosition, maxScroll, options]);
+    return () => {
+      containerEl.removeEventListener('wheel', onWheel);
+      if (wheelRafIdRef.current != null) {
+        cancelAnimationFrame(wheelRafIdRef.current);
+        wheelRafIdRef.current = null;
+      }
+    };
+  }, [scrollableRef, options]);
 
   // Prevent native scroll from container (safety)
   useEffect(() => {
