@@ -127,7 +127,10 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     const maxTopLocal = Math.max(0, content - viewport);
     const thumbHeight = Math.max(20, (viewport > 0 && content > 0) ? (viewport / content) * trackHeight : 0);
     const scrollArea = Math.max(0, trackHeight - thumbHeight);
-    const thumbTop = maxTopLocal > 0 ? (scrollPosition.top / maxTopLocal) * scrollArea : 0;
+    // Thumb starts at 100px from top and moves to 100% of track
+    const minThumbTop = 100;
+    const calculatedThumbTop = maxTopLocal > 0 ? (scrollPosition.top / maxTopLocal) * (scrollArea - minThumbTop) : 0;
+    const thumbTop = minThumbTop + calculatedThumbTop;
 
     return (
       <div
