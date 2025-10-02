@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import './App.css';
 import Cell from './components/Cell/Cell';
 import ScrollbarDeveopment from './ScrollbarDeveopment';
+import ScrollTry3 from './components/ScrollTry3/ScrollTry3';
 
 const COLS = 5;
 
@@ -152,7 +153,8 @@ const App = () => {
   // );
 
   return (
-    <ScrollbarDeveopment />
+    // <ScrollbarDeveopment />
+    <ScrollTry3 />
   );
 };
 
