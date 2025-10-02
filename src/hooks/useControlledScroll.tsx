@@ -17,6 +17,7 @@ const SCROLLBAR_WIDTH = 12;
 export const useControlledScroll = (options?: UseControlledScrollOptions) => {
   const scrollableRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const thumbRef = useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = useState({ top: 0, left: 0 });
   const [maxScroll, setMaxScroll] = useState({ top: 0, left: 0 });
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -38,6 +39,10 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     const containerEl = scrollableRef.current;
     const contentEl = contentRef.current;
     if (!containerEl || !contentEl) return;
+
+    // Performance hints
+    containerEl.style.contain = 'strict';
+    contentEl.style.willChange = 'transform';
 
     const updateSizes = () => {
       const height = containerEl.clientHeight;
@@ -103,6 +108,9 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     dragStartRef.current = { y: e.clientY, scrollTop: scrollPosition.top };
     document.addEventListener('mousemove', onThumbMouseMove);
     document.addEventListener('mouseup', onThumbMouseUp);
+    // UX: indicate dragging and reduce selection jank
+    document.body.style.cursor = 'grabbing';
+    (document.body as HTMLElement).style.userSelect = 'none';
   };
 
   const onThumbMouseMove = (e: MouseEvent) => {
@@ -126,6 +134,16 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
       
       const deltaY = e.clientY - dragStartRef.current.y;
       const nextTop = Math.max(0, Math.min(maxTop, dragStartRef.current.scrollTop + (deltaY * (maxTop / availableThumbArea))));
+
+      // Immediate visual updates to minimize perceived latency
+      if (contentRef.current) {
+        contentRef.current.style.transform = `translate3d(-${scrollPosition.left}px, -${nextTop}px, 0)`;
+      }
+      if (thumbRef.current) {
+        const proportion = maxTop > 0 ? (nextTop / maxTop) : 0;
+        const computedThumbTop = Math.min(maxThumbTop, topMargin + proportion * (maxThumbTop - topMargin));
+        thumbRef.current.style.top = `${computedThumbTop}px`;
+      }
       
       // Batch the state update
       setScrollPosition(prev => ({ ...prev, top: nextTop }));
@@ -138,6 +156,8 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     isDraggingRef.current = false;
     document.removeEventListener('mousemove', onThumbMouseMove);
     document.removeEventListener('mouseup', onThumbMouseUp);
+    document.body.style.cursor = '';
+    (document.body as HTMLElement).style.userSelect = '';
   };
 
   // Renderer para a barra vertical (track + thumb)
@@ -153,6 +173,7 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     const bottomMargin = THUMB_BOTTOM_MARGIN;
     const maxThumbTop = scrollArea - bottomMargin;
     const calculatedThumbTop = maxTopLocal > 0 ? (scrollPosition.top / maxTopLocal) * (maxThumbTop - topMargin) : 0;
+    
     const thumbTop = Math.min(maxThumbTop, topMargin + calculatedThumbTop);
 
     return (
@@ -168,6 +189,7 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
         }}
       >
         <div
+          ref={thumbRef}
           onMouseDown={onThumbMouseDown}
           style={{
             position: 'absolute',
