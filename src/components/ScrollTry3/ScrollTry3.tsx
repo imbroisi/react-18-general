@@ -3,6 +3,8 @@ import ScrollableContent from './ScrollableContent';
 import { useControlledScroll } from '../../hooks/useControlledScroll';
 import './ScrollTry3.css';
 
+const SCROLLBAR_WIDTH = 12;
+
 export interface ScrollTry3Props {
 
 }
@@ -37,9 +39,9 @@ const ScrollTry3 = (props: ScrollTry3Props) => {
         <div
           ref={container1.scrollableRef}
           className="scrollable-content"
-          style={{ margin: '20px', overflow: 'hidden', position: 'relative', paddingRight: 12, height: 'calc(100vh - 40px)', minWidth: '400px', flex: '1' }}
+          style={{ margin: '20px', overflow: 'hidden', position: 'relative', paddingRight: SCROLLBAR_WIDTH, height: 'calc(100vh - 40px)', minWidth: '400px', flex: '1' }}
         >
-          <container1.VerticalScrollbar color="#3498db" />
+          <container1.VerticalScrollbar />
 
           <div ref={container1.contentRef} className="scrollable-inner" style={{ zIndex: 1 }}>
             <ScrollableContent />
@@ -50,9 +52,9 @@ const ScrollTry3 = (props: ScrollTry3Props) => {
         <div
           ref={container2.scrollableRef}
           className="scrollable-content"
-          style={{ margin: '20px', overflow: 'hidden', position: 'relative', paddingRight: 12, height: 'calc(100vh - 40px)', minWidth: '400px', flex: '1' }}
+          style={{ margin: '20px', overflow: 'hidden', position: 'relative', paddingRight: SCROLLBAR_WIDTH, height: 'calc(100vh - 40px)', minWidth: '400px', flex: '1' }}
         >
-          <container2.VerticalScrollbar color="#9b59b6" />
+          <container2.VerticalScrollbar />
 
           <div ref={container2.contentRef} className="scrollable-inner" style={{ zIndex: 1 }}>
             <ScrollableContent />

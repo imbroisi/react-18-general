@@ -7,6 +7,13 @@ export interface UseControlledScrollOptions {
   }) => void;
 }
 
+const COLOR_THUMB = '#a0a0a0';
+const COLOR_TRACK = '#ecf0f1';
+const THUMB_HEIGHT = 20;
+const THUMB_TOP_MARGIN = 100;
+const THUMB_BOTTOM_MARGIN = 8;
+const SCROLLBAR_WIDTH = 12;
+
 export const useControlledScroll = (options?: UseControlledScrollOptions) => {
   const scrollableRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -19,10 +26,11 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
   const dragStartRef = useRef({ y: 0, scrollTop: 0 });
   const isDraggingRef = useRef(false);
 
-  // Controlled transform application
+  // Controlled transform application - optimized for smooth updates
   useEffect(() => {
     if (!contentRef.current) return;
-    contentRef.current.style.transform = `translate(-${scrollPosition.left}px, -${scrollPosition.top}px)`;
+    // Use transform3d for hardware acceleration
+    contentRef.current.style.transform = `translate3d(-${scrollPosition.left}px, -${scrollPosition.top}px, 0)`;
   }, [scrollPosition]);
 
   // Measure sizes and compute max scroll
@@ -73,7 +81,7 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
     };
     containerEl.addEventListener('wheel', onWheel, { passive: false });
     return () => containerEl.removeEventListener('wheel', onWheel);
-  }, [scrollPosition, maxScroll, options?.onUserScroll]);
+  }, [scrollPosition, maxScroll, options]);
 
   // Prevent native scroll from container (safety)
   useEffect(() => {
@@ -99,25 +107,31 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
 
   const onThumbMouseMove = (e: MouseEvent) => {
     if (!isDraggingRef.current) return;
-    const trackHeight = containerSize.height;
-    const viewport = containerSize.height;
-    const content = contentSize.height;
-    const maxTop = Math.max(0, content - viewport);
-    if (maxTop <= 0) return;
-    const thumbHeight = Math.max(20, (viewport / content) * trackHeight);
-    const scrollArea = trackHeight - thumbHeight;
     
-    // Account for thumb positioning constraints
-    const minThumbTop = 100;
-    const bottomMargin = 8;
-    const maxThumbTop = scrollArea - bottomMargin;
-    const availableThumbArea = maxThumbTop - minThumbTop;
-    
-    const deltaY = e.clientY - dragStartRef.current.y;
-    const nextTop = Math.max(0, Math.min(maxTop, dragStartRef.current.scrollTop + (deltaY * (maxTop / availableThumbArea))));
-    setScrollPosition(prev => ({ ...prev, top: nextTop }));
-    // Notifica scroll do usuário
-    options?.onUserScroll?.({ position: { top: nextTop, left: scrollPosition.left }, maxScroll });
+    // Use requestAnimationFrame for smoother updates
+    requestAnimationFrame(() => {
+      const trackHeight = containerSize.height;
+      const viewport = containerSize.height;
+      const content = contentSize.height;
+      const maxTop = Math.max(0, content - viewport);
+      if (maxTop <= 0) return;
+      const thumbHeight = Math.max(THUMB_HEIGHT, (viewport / content) * trackHeight);
+      const scrollArea = trackHeight - thumbHeight;
+      
+      // Account for thumb positioning constraints
+        const topMargin = THUMB_TOP_MARGIN;
+      const bottomMargin = THUMB_BOTTOM_MARGIN;
+        const maxThumbTop = scrollArea - bottomMargin;
+        const availableThumbArea = maxThumbTop - topMargin;
+      
+      const deltaY = e.clientY - dragStartRef.current.y;
+      const nextTop = Math.max(0, Math.min(maxTop, dragStartRef.current.scrollTop + (deltaY * (maxTop / availableThumbArea))));
+      
+      // Batch the state update
+      setScrollPosition(prev => ({ ...prev, top: nextTop }));
+      // Notifica scroll do usuário
+      options?.onUserScroll?.({ position: { top: nextTop, left: scrollPosition.left }, maxScroll });
+    });
   };
 
   const onThumbMouseUp = () => {
@@ -127,19 +141,19 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
   };
 
   // Renderer para a barra vertical (track + thumb)
-  const VerticalScrollbar: React.FC<{ color?: string }>= ({ color = '#3498db' }) => {
+  const VerticalScrollbar: React.FC = () => {
     const trackHeight = containerSize.height;
     const viewport = containerSize.height;
     const content = contentSize.height;
     const maxTopLocal = Math.max(0, content - viewport);
-    const thumbHeight = Math.max(20, (viewport > 0 && content > 0) ? (viewport / content) * trackHeight : 0);
+    const thumbHeight = Math.max(THUMB_HEIGHT, (viewport > 0 && content > 0) ? (viewport / content) * trackHeight : 0);
     const scrollArea = Math.max(0, trackHeight - thumbHeight);
     // Thumb starts at 100px from top and moves to 8px from bottom
-    const minThumbTop = 100;
-    const bottomMargin = 8;
+        const topMargin = THUMB_TOP_MARGIN;
+    const bottomMargin = THUMB_BOTTOM_MARGIN;
     const maxThumbTop = scrollArea - bottomMargin;
-    const calculatedThumbTop = maxTopLocal > 0 ? (scrollPosition.top / maxTopLocal) * (maxThumbTop - minThumbTop) : 0;
-    const thumbTop = Math.min(maxThumbTop, minThumbTop + calculatedThumbTop);
+    const calculatedThumbTop = maxTopLocal > 0 ? (scrollPosition.top / maxTopLocal) * (maxThumbTop - topMargin) : 0;
+    const thumbTop = Math.min(maxThumbTop, topMargin + calculatedThumbTop);
 
     return (
       <div
@@ -147,9 +161,9 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
           position: 'absolute',
           top: 0,
           right: 0,
-          width: 12,
+          width: SCROLLBAR_WIDTH,
           height: '100%',
-          background: '#ecf0f1',
+          background: COLOR_TRACK,
           zIndex: 2
         }}
       >
@@ -160,7 +174,7 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
             left: 2,
             width: 8,
             borderRadius: 4,
-            background: color,
+            background: COLOR_THUMB,
             cursor: 'pointer',
             height: `${thumbHeight}px`,
             top: `${thumbTop}px`
