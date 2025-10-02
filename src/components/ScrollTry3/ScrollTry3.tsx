@@ -12,18 +12,38 @@ export interface ScrollTry3Props {
 const Inner: React.FC = () => {
   const container1 = useControlledScroll({
     onUserScroll: ({ position, maxScroll }) => {
-      if (maxScroll.top > 0 && container2.maxScroll.top > 0) {
-        const ratio = position.top / maxScroll.top;
-        container2.applyPosition(ratio * container2.maxScroll.top, 0);
-      }
+      const hasVert = maxScroll.top > 0 && container2.maxScroll.top > 0;
+      const hasHorz = maxScroll.left > 0 && container2.maxScroll.left > 0;
+      const EPS = 1; // snap when within 1px of the end
+      const targetTop = hasVert
+        ? (maxScroll.top - position.top <= EPS
+            ? container2.maxScroll.top
+            : Math.floor((position.top / maxScroll.top) * container2.maxScroll.top))
+        : container2.scrollPosition.top;
+      const targetLeft = hasHorz
+        ? (maxScroll.left - position.left <= EPS
+            ? container2.maxScroll.left
+            : Math.floor((position.left / maxScroll.left) * container2.maxScroll.left))
+        : container2.scrollPosition.left;
+      container2.applyPosition(targetTop, targetLeft);
     }
   });
   const container2 = useControlledScroll({
     onUserScroll: ({ position, maxScroll }) => {
-      if (maxScroll.top > 0 && container1.maxScroll.top > 0) {
-        const ratio = position.top / maxScroll.top;
-        container1.applyPosition(ratio * container1.maxScroll.top, 0);
-      }
+      const hasVert = maxScroll.top > 0 && container1.maxScroll.top > 0;
+      const hasHorz = maxScroll.left > 0 && container1.maxScroll.left > 0;
+      const EPS = 1;
+      const targetTop = hasVert
+        ? (maxScroll.top - position.top <= EPS
+            ? container1.maxScroll.top
+            : Math.floor((position.top / maxScroll.top) * container1.maxScroll.top))
+        : container1.scrollPosition.top;
+      const targetLeft = hasHorz
+        ? (maxScroll.left - position.left <= EPS
+            ? container1.maxScroll.left
+            : Math.floor((position.left / maxScroll.left) * container1.maxScroll.left))
+        : container1.scrollPosition.left;
+      container1.applyPosition(targetTop, targetLeft);
     }
   });
 
