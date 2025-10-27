@@ -3,37 +3,38 @@ import './App.css';
 import Cell from './components/Cell/Cell';
 import ScrollbarDeveopment from './ScrollbarDeveopment';
 import ScrollTry3 from './components/ScrollTry3/ScrollTry3';
+import ScrollTry4 from './components/ScrollTry4/ScrollTry4';
 
 const COLS = 5;
 
 const App = () => {
-  const [show, setShow] = useState<boolean[]>(new Array(19).fill(true));
-  const [rotatedArrows, setRotatedArrows] = useState<boolean[]>(new Array(19).fill(true));
+  // const [show, setShow] = useState<boolean[]>(new Array(19).fill(true));
+  // const [rotatedArrows, setRotatedArrows] = useState<boolean[]>(new Array(19).fill(true));
 
-  const toggleArrow = (index: number) => {
-    const newRotatedArrows = [...rotatedArrows];
-    newRotatedArrows[index] = !newRotatedArrows[index];
-    setRotatedArrows(newRotatedArrows);
+  // const toggleArrow = (index: number) => {
+  //   const newRotatedArrows = [...rotatedArrows];
+  //   newRotatedArrows[index] = !newRotatedArrows[index];
+  //   setRotatedArrows(newRotatedArrows);
 
-    const newShow = [...show];
-    newShow[index] = !newShow[index];
-    setShow(newShow);
-  };
-  const fixedColumnRef = useRef<HTMLDivElement>(null);
-  const scrollableColumnRef = useRef<HTMLDivElement>(null);
+  //   const newShow = [...show];
+  //   newShow[index] = !newShow[index];
+  //   setShow(newShow);
+  // };
+  // const fixedColumnRef = useRef<HTMLDivElement>(null);
+  // const scrollableColumnRef = useRef<HTMLDivElement>(null);
 
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const scrollingElement = event.currentTarget;
-    const isFixedColumn = scrollingElement === fixedColumnRef.current;
+  // const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+  //   const scrollingElement = event.currentTarget;
+  //   const isFixedColumn = scrollingElement === fixedColumnRef.current;
 
-    if (isFixedColumn && scrollableColumnRef.current) {
-      scrollableColumnRef.current.scrollTop = scrollingElement.scrollTop;
-    } else if (!isFixedColumn && fixedColumnRef.current) {
-      fixedColumnRef.current.scrollTop = scrollingElement.scrollTop;
-    }
-  };
+  //   if (isFixedColumn && scrollableColumnRef.current) {
+  //     scrollableColumnRef.current.scrollTop = scrollingElement.scrollTop;
+  //   } else if (!isFixedColumn && fixedColumnRef.current) {
+  //     fixedColumnRef.current.scrollTop = scrollingElement.scrollTop;
+  //   }
+  // };
 
-  console.log(show);
+  // console.log(show);
 
   // return (
   //   <div className="table-container">
@@ -154,7 +155,7 @@ const App = () => {
 
   return (
     // <ScrollbarDeveopment />
-    <ScrollTry3 />
+    <ScrollTry4 />
   );
 };
 

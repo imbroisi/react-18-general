@@ -10,7 +10,7 @@ export interface UseControlledScrollOptions {
 const COLOR_THUMB = '#a0a0a0';
 const COLOR_TRACK = '#ecf0f1';
 const THUMB_HEIGHT = 20;
-const THUMB_TOP_MARGIN = 100;
+const THUMB_TOP_MARGIN = 2;
 const THUMB_BOTTOM_MARGIN = 8;
 const SCROLLBAR_WIDTH = 12;
 
@@ -36,11 +36,11 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
 
   const applyPosition = (top: number, left: number) => {
     const limitsTop = Math.max(0, contentSize.height - containerSize.height);
-    const limitsLeft = Math.max(0, contentSize.width - containerSize.width);
+    // const limitsLeft = Math.max(0, contentSize.width - containerSize.width); // ← horizontal disabled
     const clampedTop = Math.max(0, Math.min(limitsTop, top));
-    const clampedLeft = Math.max(0, Math.min(limitsLeft, left));
+    // const clampedLeft = 0; // ← horizontal disabled (was: clamp by limitsLeft)
     if (contentRef.current) {
-      contentRef.current.style.transform = `translate3d(-${clampedLeft}px, -${clampedTop}px, 0)`;
+      contentRef.current.style.transform = `translate3d(0px, -${clampedTop}px, 0)`; // ← horizontal disabled (X set to 0)
     }
     if (thumbRef.current) {
       const trackHeight = containerSize.height;
@@ -56,14 +56,14 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
       const computedThumbTop = Math.min(maxThumbTop, topMargin + proportion * (maxThumbTop - topMargin));
       thumbRef.current.style.top = `${computedThumbTop}px`;
     }
-    scrollPosRef.current = { top: clampedTop, left: clampedLeft };
+    scrollPosRef.current = { top: clampedTop, left: 0 }; // ← horizontal disabled
   };
 
   // Controlled transform application - optimized for smooth updates
   useEffect(() => {
     if (!contentRef.current) return;
     // Use transform3d for hardware acceleration
-    contentRef.current.style.transform = `translate3d(-${scrollPosition.left}px, -${scrollPosition.top}px, 0)`;
+    contentRef.current.style.transform = `translate3d(0px, -${scrollPosition.top}px, 0)`; // ← horizontal disabled (X set to 0)
   }, [scrollPosition]);
   
   // Keep refs in sync with latest state
@@ -93,11 +93,11 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
       setContentSize({ width: cWidth, height: cHeight });
       setMaxScroll({
         top: Math.max(0, cHeight - height),
-        left: Math.max(0, cWidth - width)
+        left: 0 // ← horizontal disabled (was: Math.max(0, cWidth - width))
       });
       setScrollPosition(prev => ({
         top: Math.min(prev.top, Math.max(0, cHeight - height)),
-        left: Math.min(prev.left, Math.max(0, cWidth - width))
+        left: 0 // ← horizontal disabled (was: clamp by width)
       }));
     };
 
@@ -119,23 +119,23 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
       e.preventDefault();
       e.stopPropagation();
       wheelAccumRef.current.dy += e.deltaY;
-      wheelAccumRef.current.dx += e.deltaX;
+      // wheelAccumRef.current.dx += e.deltaX; // ← horizontal disabled
       if (wheelRafIdRef.current == null) {
         wheelRafIdRef.current = requestAnimationFrame(() => {
           wheelRafIdRef.current = null;
-          const { dy, dx } = wheelAccumRef.current;
+          const { dy /*, dx*/ } = wheelAccumRef.current; // ← horizontal disabled
           wheelAccumRef.current.dy = 0;
-          wheelAccumRef.current.dx = 0;
+          // wheelAccumRef.current.dx = 0; // ← horizontal disabled
 
           const current = scrollPosRef.current;
           const limits = maxScrollRef.current;
           const nextTop = Math.max(0, Math.min(limits.top, current.top + dy));
-          const nextLeft = Math.max(0, Math.min(limits.left, current.left + dx));
+          const nextLeft = 0; // ← horizontal disabled
 
           if (nextTop !== current.top || nextLeft !== current.left) {
             // Immediate DOM updates to avoid rerendering the parent
             if (contentRef.current) {
-              contentRef.current.style.transform = `translate3d(-${nextLeft}px, -${nextTop}px, 0)`;
+              contentRef.current.style.transform = `translate3d(0px, -${nextTop}px, 0)`; // ← horizontal disabled
             }
             if (thumbRef.current) {
               const trackHeight = containerSize.height;
@@ -151,10 +151,10 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
               const computedThumbTop = Math.min(maxThumbTop, topMargin + proportion * (maxThumbTop - topMargin));
               thumbRef.current.style.top = `${computedThumbTop}px`;
             }
-            scrollPosRef.current = { top: nextTop, left: nextLeft };
+            scrollPosRef.current = { top: nextTop, left: 0 }; // ← horizontal disabled
             // Notify only when top actually changes to avoid redundant feedback
             if (nextTop !== lastNotifiedTopRef.current) {
-              options?.onUserScroll?.({ position: { top: nextTop, left: nextLeft }, maxScroll: limits });
+              options?.onUserScroll?.({ position: { top: nextTop, left: 0 }, maxScroll: { top: limits.top, left: 0 } }); // ← horizontal disabled
               lastNotifiedTopRef.current = nextTop;
             }
           }
@@ -220,7 +220,7 @@ export const useControlledScroll = (options?: UseControlledScrollOptions) => {
 
       // Immediate visual updates to minimize perceived latency
       if (contentRef.current) {
-        contentRef.current.style.transform = `translate3d(-${scrollPosition.left}px, -${nextTop}px, 0)`;
+        contentRef.current.style.transform = `translate3d(0px, -${nextTop}px, 0)`; // ← horizontal disabled
       }
       if (thumbRef.current) {
         const proportion = maxTop > 0 ? (nextTop / maxTop) : 0;

@@ -1,0 +1,31 @@
+.column1-container {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.column1-scroll {
+  height: 100%;
+  overflow-y: hidden; /* controlled via context */
+  padding: 0;
+}
+
+.column1-item {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.column1-item.even {
+  background-color: #f9f9f9;
+}
+
+.column1-item.odd {
+  background-color: #ffffff;
+}
+
+
