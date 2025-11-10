@@ -8,6 +8,22 @@
   color: #333;
 }
 
+/* Override MUI Fade transition for instant hide */
+.tooltip-container [class*="MuiTooltip-tooltip"],
+.tooltip-container [class*="MuiTooltip-popper"],
+.tooltip-container [class*="MuiFade"],
+.tooltip-container [class*="MuiFade-root"] {
+  transition: none !important;
+  transition-duration: 0ms !important;
+  animation: none !important;
+}
+
+.tooltip-container [class*="MuiTooltip-tooltip"][class*="MuiFade-entered"],
+.tooltip-container [class*="MuiTooltip-tooltip"][class*="MuiFade-exiting"] {
+  opacity: 1 !important;
+  transition: none !important;
+}
+
 .speech-bubble-tooltip-paper {
   pointer-events: auto !important;
   position: relative !important;
@@ -15,8 +31,8 @@
   background-color: #fff !important;
   color: #333 !important;
   /* border-radius: 20px !important; */
-  border: 2px solid #333 !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid #f8f8f8 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.075) !important;
   margin-bottom: 12px !important;
   overflow: visible !important;
   transform: translateY(-2px) !important;
@@ -24,35 +40,18 @@
   font-weight: 600 !important;
   letter-spacing: 0.3px !important;
   max-width: none !important;
+  transition: none !important;
 }
 
-/* Speech bubble triangle - outer border (darker) */
-.speech-bubble-tooltip-paper::after {
-  content: '';
-  position: absolute;
-  bottom: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-top: 12px solid #333;
-  z-index: 1;
+/* Style MUI Tooltip arrow to match speech bubble with border */
+.speech-bubble-tooltip-paper .MuiTooltip-arrow {
+  color: #f8f8f8 !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.075)) !important;
 }
 
-/* Speech bubble triangle - inner fill (white to match background) */
-.speech-bubble-tooltip-paper::before {
-  content: '';
-  position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 10px solid #fff;
-  z-index: 2;
+/* Create border effect for arrow - outer border */
+.speech-bubble-tooltip-paper .MuiTooltip-arrow::before {
+  border: 1px solid #f8f8f8 !important;
+  background-color: #fff !important;
 }
 
