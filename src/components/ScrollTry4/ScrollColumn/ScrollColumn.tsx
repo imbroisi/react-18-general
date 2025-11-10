@@ -16,7 +16,9 @@ const Column3 = () => {
       overflowY: 'auto',
       background: '#fafafa',
       width: '18px',
-      position: 'relative',
+      position: 'absolute',
+      right: 0,
+      // borderTop: '1px solid #ddd',
     }}>
       <div style={{
         position: 'absolute',

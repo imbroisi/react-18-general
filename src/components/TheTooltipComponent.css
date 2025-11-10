@@ -1,0 +1,58 @@
+.tooltip-container {
+  display: inline-block;
+}
+
+.tooltip-trigger {
+  cursor: pointer;
+  font-size: 16px;
+  color: #333;
+}
+
+.speech-bubble-tooltip-paper {
+  pointer-events: auto !important;
+  position: relative !important;
+  padding: 14px 18px !important;
+  background-color: #fff !important;
+  color: #333 !important;
+  /* border-radius: 20px !important; */
+  border: 2px solid #333 !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+  margin-bottom: 12px !important;
+  overflow: visible !important;
+  transform: translateY(-2px) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px !important;
+  max-width: none !important;
+}
+
+/* Speech bubble triangle - outer border (darker) */
+.speech-bubble-tooltip-paper::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 12px solid #333;
+  z-index: 1;
+}
+
+/* Speech bubble triangle - inner fill (white to match background) */
+.speech-bubble-tooltip-paper::before {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 10px solid #fff;
+  z-index: 2;
+}
+

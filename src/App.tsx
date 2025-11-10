@@ -1,11 +1,12 @@
-import { useRef, useState } from 'react';
+// import { useRef, useState } from 'react';
 import './App.css';
-import Cell from './components/Cell/Cell';
-import ScrollbarDeveopment from './ScrollbarDeveopment';
-import ScrollTry3 from './components/ScrollTry3/ScrollTry3';
-import ScrollTry4 from './components/ScrollTry4/ScrollTry4';
+// import Cell from './components/Cell/Cell';
+// import ScrollbarDeveopment from './ScrollbarDeveopment';
+// import ScrollTry3 from './components/ScrollTry3/ScrollTry3';
+// import ScrollTry4 from './components/ScrollTry4/ScrollTry4';
+import TheTooltipComponent from './components/TheTooltipComponent';
 
-const COLS = 5;
+// const COLS = 5;
 
 const App = () => {
   // const [show, setShow] = useState<boolean[]>(new Array(19).fill(true));
@@ -154,8 +155,11 @@ const App = () => {
   // );
 
   return (
+    <div className="app-container">
+      <TheTooltipComponent />
+    </div>
     // <ScrollbarDeveopment />
-    <ScrollTry4 />
+    // <ScrollTry4 />
   );
 };
 
