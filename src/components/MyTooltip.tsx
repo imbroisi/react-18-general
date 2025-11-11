@@ -8,6 +8,8 @@ const BORDER_COLOR = '#E0E0E0';
 const BORDER_SHADOW = '0,0,0,0.12';
 // Suggested shadow width (px)
 const BORDER_SHADOW_WIDTH = 4;
+// Arrow shadow color (rgba r,g,b,a) to fine-tune arrow shadow independently
+const ARROW_SHADOW_COLOR = '0,0,0,0.05';
 // Arrow height
 const ARROW_SIZE = 18; // px
 
@@ -21,11 +23,13 @@ const MyTooltip: React.FC<MyTooltipProps> = ({ children, title }) => {
   const shadowPx = `${BORDER_SHADOW_WIDTH}px`;
   // Bottom and right shadows
   const boxShadow = `0 ${shadowPx} ${shadowPx} rgba(${BORDER_SHADOW}), ${shadowPx} 0 ${shadowPx} rgba(${BORDER_SHADOW})`;
+  // Arrow shadow (separate control) using the same geometry as the box
+  const arrowShadow = `0 ${shadowPx} ${shadowPx} rgba(${ARROW_SHADOW_COLOR}), ${shadowPx} 0 ${shadowPx} rgba(${ARROW_SHADOW_COLOR})`;
 
   return (
     <Tooltip
-      title={<>Teste <i><b onClick={() => alert('123456')}>123456</b></i></>}
-      arrow
+    title={<>Teste <i><b onClick={() => alert('123456')}>123456</b></i></>}
+    arrow
       placement="top"
       enterDelay={0}
       enterNextDelay={0}
@@ -50,7 +54,7 @@ const MyTooltip: React.FC<MyTooltipProps> = ({ children, title }) => {
               // Add a border and shadow to the arrow tip
               '&::before': {
                 border: `1px solid ${BORDER_COLOR}`,
-                boxShadow,
+                boxShadow: arrowShadow,
               },
             },
           },
