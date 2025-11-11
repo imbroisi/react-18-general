@@ -19,6 +19,11 @@ const TheTooltipComponent: React.FC = () => {
         slotProps={{
           tooltip: {
             className: 'speech-bubble-tooltip-paper',
+            sx: {
+              '& .MuiTooltip-arrow': {
+                color: '#fff',
+              },
+            },
           },
           popper: {
             style: { transition: 'none' },

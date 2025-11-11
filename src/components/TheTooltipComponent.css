@@ -45,7 +45,6 @@
 
 /* Style MUI Tooltip arrow to match speech bubble with border */
 .speech-bubble-tooltip-paper .MuiTooltip-arrow {
-  color: #f8f8f8 !important;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.075)) !important;
 }
 

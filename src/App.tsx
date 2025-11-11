@@ -4,7 +4,9 @@ import './App.css';
 // import ScrollbarDeveopment from './ScrollbarDeveopment';
 // import ScrollTry3 from './components/ScrollTry3/ScrollTry3';
 // import ScrollTry4 from './components/ScrollTry4/ScrollTry4';
-import TheTooltipComponent from './components/TheTooltipComponent';
+// import TheTooltipComponent from './components/TheTooltipComponent';
+import MyTooltip from './components/MyTooltip';
+import MyPopover from './components/MyPopover';
 
 // const COLS = 5;
 
@@ -154,12 +156,29 @@ const App = () => {
 
   // );
 
+  // return (
+  //   <div className="table-container">...</div>
+  // );
+
   return (
-    <div className="app-container">
-      <TheTooltipComponent />
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        width: '100%',
+      }}
+    >
+      <div style={{ display: 'flex', gap: '16px' }}>
+        <MyTooltip title="Minha mensagem aqui">
+          Aqui estou eu
+        </MyTooltip>
+        {/* <MyPopover title="Minha mensagem aqui">
+          Aqui estou eu
+        </MyPopover> */}
+      </div>
     </div>
-    // <ScrollbarDeveopment />
-    // <ScrollTry4 />
   );
 };
 
