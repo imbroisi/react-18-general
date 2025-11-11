@@ -1,0 +1,43 @@
+/* Defaults via CSS custom properties so you can tweak in one place */
+.tooltipSurface {
+  --color: #ffffff;
+  --border-color: #e0e0e0;
+  /* rgba(r,g,b,a) for box shadow (same used in both directions) */
+  --shadow-rgb: 0, 0, 0, 0.12;
+  --shadow-w: 4px;
+  /* Arrow specific shadow color (can be lighter) */
+  --arrow-shadow-rgb: 0, 0, 0, 0.12;
+  --arrow-shadow-w: 4px;
+  /* Push arrow shadow further down to avoid bleeding onto the box edge */
+  --arrow-shadow-offset-y: 6px;
+  --arrow-size: 18px;
+
+  background-color: var(--color);
+  color: inherit;
+  border: 1px solid var(--border-color);
+  box-shadow:
+    0 var(--shadow-w) var(--shadow-w) rgba(var(--shadow-rgb)),
+    var(--shadow-w) 0 var(--shadow-w) rgba(var(--shadow-rgb));
+
+  /* Style the MUI arrow */
+}
+
+.arrow {
+  color: var(--color);
+  font-size: var(--arrow-size); /* controls the arrow size */
+  /* Use drop-shadow on the arrow element for better rendering on triangles */
+  /* Only cast shadow downward to avoid touching the top edge under the box */
+  filter: drop-shadow(0 var(--arrow-shadow-offset-y) var(--arrow-shadow-w) rgba(var(--arrow-shadow-rgb))) !important;
+
+  &::before {
+    border: 1px solid var(--border-color);
+    /* Keep box-shadow minimal; main shadow comes from drop-shadow above */
+    box-shadow: none;
+  }
+}
+
+.trigger {
+  cursor: default;
+}
+
+
