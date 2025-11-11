@@ -171,7 +171,7 @@ const App = () => {
       }}
     >
       <div style={{ display: 'flex', gap: '16px' }}>
-        <MyTooltip title="Minha mensagem aqui">
+        <MyTooltip title={<>Teste <i><b onClick={() => alert('123456')}>123456</b></i></>}>
           Aqui estou eu
         </MyTooltip>
         {/* <MyPopover title="Minha mensagem aqui">

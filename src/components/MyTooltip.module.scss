@@ -1,41 +1,31 @@
-/* Defaults via CSS custom properties so you can tweak in one place */
+/* Step 1: only background color moved to SCSS */
 .tooltipSurface {
-  --color: #ffffff;
-  --border-color: #e0e0e0;
-  /* rgba(r,g,b,a) for box shadow (same used in both directions) */
-  --shadow-rgb: 0, 0, 0, 0.12;
-  --shadow-w: 4px;
-  /* Arrow specific shadow color (can be lighter) */
-  --arrow-shadow-rgb: 0, 0, 0, 0.12;
-  --arrow-shadow-w: 4px;
-  /* Push arrow shadow further down to avoid bleeding onto the box edge */
-  --arrow-shadow-offset-y: 6px;
-  --arrow-size: 18px;
-
-  background-color: var(--color);
-  color: inherit;
-  border: 1px solid var(--border-color);
+  background-color: #ffffff !important;
+  color: inherit !important; /* Ensure text color is inherited */
+  /* Step 2: move border to SCSS */
+  border: 1px solid #e0e0e0 !important;
+  /* Step 7: add configurable border radius */
+  border-radius: 4px !important;
+  /* Step 3: move box shadow to SCSS (bottom and right, subtle) */
   box-shadow:
-    0 var(--shadow-w) var(--shadow-w) rgba(var(--shadow-rgb)),
-    var(--shadow-w) 0 var(--shadow-w) rgba(var(--shadow-rgb));
-
-  /* Style the MUI arrow */
+    0 4px 4px rgba(0, 0, 0, 0.12),
+    4px 0 4px rgba(0, 0, 0, 0.12) !important;
 }
 
+/* Step 4: move basic arrow styling (color and size) to SCSS */
 .arrow {
-  color: var(--color);
-  font-size: var(--arrow-size); /* controls the arrow size */
-  /* Use drop-shadow on the arrow element for better rendering on triangles */
-  /* Only cast shadow downward to avoid touching the top edge under the box */
-  filter: drop-shadow(0 var(--arrow-shadow-offset-y) var(--arrow-shadow-w) rgba(var(--arrow-shadow-rgb))) !important;
-
+  color: #ffffff !important;      /* match tooltip background */
+  font-size: 18px !important;     /* arrow size */
+  /* Step 5: move arrow border and shadow to SCSS */
   &::before {
-    border: 1px solid var(--border-color);
-    /* Keep box-shadow minimal; main shadow comes from drop-shadow above */
-    box-shadow: none;
+    border: 1px solid #e0e0e0 !important;
+    box-shadow:
+      0 4px 4px rgba(0, 0, 0, 0.05),
+      4px 0 4px rgba(0, 0, 0, 0.05) !important;
   }
 }
 
+/* Step 6: move cursor style to SCSS */
 .trigger {
   cursor: default;
 }
