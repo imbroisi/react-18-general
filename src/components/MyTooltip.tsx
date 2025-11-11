@@ -19,6 +19,9 @@ const MyTooltip: React.FC<MyTooltipProps> = ({ children, title }) => {
       enterDelay={0}
       enterNextDelay={0}
       leaveDelay={0}
+      TransitionProps={{
+        timeout: { enter: 200, exit: 0 },
+      }}
       slotProps={{
         // Style the tooltip surface
         tooltip: {
