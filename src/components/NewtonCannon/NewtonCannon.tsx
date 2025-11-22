@@ -99,6 +99,18 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       const key = event.key;
+      
+      // Tecla "0" desliga o mostrador de velocidade
+      if (key === '0') {
+        setSelectedVelocity(null);
+        // Cancelar disparo anterior se houver
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+        return;
+      }
+      
       if (key in VELOCITY_BY_KEY) {
         const velocity = VELOCITY_BY_KEY[key];
         
