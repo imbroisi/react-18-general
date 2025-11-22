@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import terraImage from '../../images/terra.png';
 import canhaoImage from '../../images/canhao.png';
+import balaImage from '../../images/bala.png';
+import './NewtonCannon.css';
 
 const CANNON_HEIGHT = 80;
 const EARTH_DIAMETER = 600;
@@ -10,7 +12,7 @@ const SCALE_KM_TO_PX = EARTH_RADIUS_PX / EARTH_RADIUS_KM; // km para pixels
 const CANNON_DISTANCE_KM = 2000; // Distância da boca do canhão à superfície em km
 const GRAVITY_M_S2 = 9.8; // Gravidade em m/s²
 const GRAVITY_KM_S2 = GRAVITY_M_S2 / 1000; // Gravidade em km/s²
-const ANIMATION_SPEED = 800; // Multiplicador de velocidade da animação
+const ANIMATION_SPEED = 100; // Multiplicador de velocidade da animação
 const VELOCITY_DISPLAY_DELAY = 200; // Delay em milissegundos para mostrar a velocidade (200ms)
 const FIRE_DELAY = 500; // Delay em milissegundos antes de disparar (1 segundo)
 const FONT_SIZE = 18; // Tamanho da fonte do texto de velocidade em pixels
@@ -19,6 +21,8 @@ const ARROW_TOP_V_POSITION = 1; // Ajuste vertical da seta de cima (em pixels)
 const ARROW_BOTTOM_V_POSITION = -9; // Ajuste vertical da seta de baixo (em pixels)
 
 // Velocidades de disparo por tecla (em km/s)
+// Ajustadas para que a tecla '7' complete uma órbita em 15 segundos
+// As outras velocidades são proporcionais
 const VELOCITY_BY_KEY: { [key: string]: number } = {
   "1": 1,   
   "2": 2,   
@@ -78,7 +82,12 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     const currentCannonWidth = cannonRef.current?.offsetWidth || cannonWidthRef.current || cannonWidth;
     const bulletInitialX = currentCannonWidth / 2;
     
+    // Converter velocidade de km/s para px/s
+    // velocity está em km/s, SCALE_KM_TO_PX é px/km, então velocity * SCALE_KM_TO_PX = px/s
     const initialVelocityPxS = velocity * SCALE_KM_TO_PX;
+    
+    // Debug: descomente para verificar a velocidade
+    // console.log(`Disparo: ${velocity} km/s = ${initialVelocityPxS} px/s`);
     const newBullet: BulletState = {
       id: bulletIdCounter.current++,
       x: bulletInitialX,
@@ -164,11 +173,20 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   }, []);
 
   useEffect(() => {
+    let lastFrameTime: number | null = null;
+    
     const animate = (currentTime: number) => {
+      // Sincronizar com refresh rate da tela (normalmente 60Hz = ~16.67ms por frame)
+      // Usar timestamp do requestAnimationFrame para melhor sincronização
+      if (lastFrameTime === null) {
+        lastFrameTime = currentTime;
+      }
+      
       setBullets(prevBullets => {
         const activeBullets = prevBullets.filter(b => b.isActive);
         if (activeBullets.length === 0) {
           isAnimatingRef.current = false;
+          lastFrameTime = null;
           return prevBullets;
         }
 
@@ -181,54 +199,57 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           
           if (deltaTime <= 0) return bullet; // Evitar cálculos desnecessários
           
-          // Calcular nova posição com física usando integração numérica
-          // Usar a posição atual da bala para calcular a gravidade
-          const currentX = bullet.x;
-          const currentY = bullet.y;
-          const distanceFromCenter = Math.sqrt(currentX * currentX + currentY * currentY);
+          // SEMPRE usar sub-steps para garantir movimento suave e linear
+          // Isso elimina "soluços" causados por variações no deltaTime
+          // Usar passos pequenos e consistentes garante precisão mesmo com deltaTime variável
+          const IDEAL_STEP_TIME = 0.008; // ~8ms por passo (mais preciso que 16ms)
+          const numSteps = Math.max(1, Math.ceil(deltaTime / IDEAL_STEP_TIME));
+          const stepTime = deltaTime / numSteps;
           
-          let newX: number;
-          let newY: number;
-          let newVx: number;
-          let newVy: number;
+          // Calcular nova posição com física usando integração numérica em sub-steps
+          let currentX = bullet.x;
+          let currentY = bullet.y;
+          let currentVx = bullet.vx;
+          let currentVy = bullet.vy;
           
-          if (distanceFromCenter > 0 && distanceFromCenter > EARTH_RADIUS_PX) {
-            // Calcular aceleração gravitacional (lei do inverso do quadrado)
-            // g = GM/r², mas vamos usar g₀ * (r₀/r)² para simplificar
-            // Onde g₀ é a gravidade na superfície e r₀ é o raio da Terra
-            const earthRadiusKm = EARTH_RADIUS_KM;
-            const currentDistanceKm = distanceFromCenter / SCALE_KM_TO_PX;
-            const gravityAtSurface = GRAVITY_KM_S2; // Gravidade na superfície em km/s²
-            const gravityAtDistance = gravityAtSurface * Math.pow(earthRadiusKm / currentDistanceKm, 2);
-            const gravityPxS2 = gravityAtDistance * SCALE_KM_TO_PX;
+          // Aplicar física em sub-steps para movimento suave e preciso
+          for (let step = 0; step < numSteps; step++) {
+            const distanceFromCenter = Math.sqrt(currentX * currentX + currentY * currentY);
             
-            // Direção do centro para a bala (normalizada)
-            const dirX = currentX / distanceFromCenter;
-            const dirY = currentY / distanceFromCenter;
-            
-            // Aceleração gravitacional apontando para o centro (oposta à direção)
-            const accelX = -gravityPxS2 * dirX;
-            const accelY = -gravityPxS2 * dirY;
-            
-            // Usar velocidade atual armazenada
-            const vx = bullet.vx;
-            const vy = bullet.vy;
-            
-            // Integração numérica (método de Verlet/leapfrog para melhor precisão)
-            // Nova velocidade
-            newVx = vx + accelX * deltaTime;
-            newVy = vy + accelY * deltaTime;
-            
-            // Nova posição usando velocidade média (método de Euler-Cromer)
-            newX = currentX + newVx * deltaTime;
-            newY = currentY + newVy * deltaTime;
-          } else {
-            // Se muito próximo do centro ou dentro da Terra, manter posição
-            newX = currentX;
-            newY = currentY;
-            newVx = bullet.vx;
-            newVy = bullet.vy;
+            if (distanceFromCenter > 0 && distanceFromCenter > EARTH_RADIUS_PX) {
+              // Calcular aceleração gravitacional (lei do inverso do quadrado)
+              const earthRadiusKm = EARTH_RADIUS_KM;
+              const currentDistanceKm = distanceFromCenter / SCALE_KM_TO_PX;
+              const gravityAtSurface = GRAVITY_KM_S2; // Gravidade na superfície em km/s²
+              const gravityAtDistance = gravityAtSurface * Math.pow(earthRadiusKm / currentDistanceKm, 2);
+              const gravityPxS2 = gravityAtDistance * SCALE_KM_TO_PX;
+              
+              // Direção do centro para a bala (normalizada)
+              const dirX = currentX / distanceFromCenter;
+              const dirY = currentY / distanceFromCenter;
+              
+              // Aceleração gravitacional apontando para o centro (oposta à direção)
+              const accelX = -gravityPxS2 * dirX;
+              const accelY = -gravityPxS2 * dirY;
+              
+              // Integração numérica (método de Euler-Cromer com sub-steps)
+              // Atualizar velocidade primeiro
+              currentVx = currentVx + accelX * stepTime;
+              currentVy = currentVy + accelY * stepTime;
+              
+              // Atualizar posição usando velocidade atualizada
+              currentX = currentX + currentVx * stepTime;
+              currentY = currentY + currentVy * stepTime;
+            } else {
+              // Se muito próximo do centro ou dentro da Terra, parar
+              break;
+            }
           }
+          
+          const newX = currentX;
+          const newY = currentY;
+          const newVx = currentVx;
+          const newVy = currentVy;
 
           // Verificar se a bala colidiu com a Terra
           const newDistanceFromCenter = Math.sqrt(newX * newX + newY * newY);
@@ -263,7 +284,10 @@ const NewtonCannon = (props: NewtonCannonProps) => {
 
         const hasActiveBullets = updatedBullets.some(b => b.isActive);
         if (hasActiveBullets && isAnimatingRef.current) {
+          lastFrameTime = currentTime;
           animationFrameRef.current = requestAnimationFrame(animate);
+        } else {
+          lastFrameTime = null;
         }
 
         return updatedBullets;
@@ -291,46 +315,20 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   };
 
   return (
-    <div style={{
-      backgroundColor: 'black',
-      width: '100%',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative'
-    }}>
+    <div className="container">
       {/* Tabela de instruções na extrema esquerda */}
       {showInstructions && (
-        <div
-          style={{
-            position: 'absolute',
-            left: '20px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            fontSize: `${FONT_SIZE - 2}px`,
-            color: 'white',
-            pointerEvents: 'none',
-            userSelect: 'none',
-            zIndex: 1000
-          }}
-        >
-          <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>Instruções:</div>
-          <table
-            style={{
-              borderCollapse: 'collapse',
-              fontSize: `${FONT_SIZE - 2}px`
-            }}
-          >
+        <div className="instructions-container" style={{ fontSize: `${FONT_SIZE - 2}px` }}>
+          <div className="instructions-title">Instruções:</div>
+          <table className="instructions-table" style={{ fontSize: `${FONT_SIZE - 2}px` }}>
             <tbody>
               <tr>
-                <td style={{ paddingRight: '12px', paddingBottom: '4px', textAlign: 'center' }}>Espaço</td>
-                <td style={{ paddingBottom: '4px' }}>liga/desliga instruções</td>
+                <td>Espaço</td>
+                <td>liga/desliga instruções</td>
               </tr>
               <tr>
-                <td style={{ paddingRight: '12px', paddingBottom: '4px', textAlign: 'center' }}>Esc</td>
-                <td style={{ paddingBottom: '4px' }}>liga/desliga indicação altura</td>
+                <td>Esc</td>
+                <td>liga/desliga indicação altura</td>
               </tr>
               {Object.entries(VELOCITY_BY_KEY).sort(([a], [b]) => {
                 // Ordenar: números primeiro (1-9), depois 0
@@ -346,28 +344,24 @@ const NewtonCannon = (props: NewtonCannonProps) => {
                 }
                 return (
                   <tr key={key}>
-                    <td style={{ paddingRight: '12px', paddingBottom: '4px', textAlign: 'center' }}>{key}</td>
-                    <td style={{ paddingBottom: '4px' }}>{description}</td>
+                    <td>{key}</td>
+                    <td>{description}</td>
                   </tr>
                 );
               })}
               <tr>
-                <td style={{ paddingRight: '12px', paddingBottom: '4px', textAlign: 'center' }}>0</td>
-                <td style={{ paddingBottom: '4px' }}>desliga mostrador de velocidade</td>
+                <td>0</td>
+                <td>desliga mostrador de velocidade</td>
               </tr>
             </tbody>
           </table>
         </div>
       )}
-      <div style={{
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
+      <div className="earth-wrapper">
         <img 
           src={terraImage} 
           alt="Terra" 
+          className="terra-image"
           style={{
             width: `${EARTH_DIAMETER}px`,
             height: `${EARTH_DIAMETER}px`
@@ -377,28 +371,18 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           ref={cannonRef}
           src={canhaoImage} 
           alt="Canhão" 
+          className="cannon-image"
           style={{ 
-            position: 'absolute',
             height: `${CANNON_HEIGHT}px`,
-            top: `calc(50% + ${initialY}px)`,
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 'auto'
+            top: `calc(50% + ${initialY}px)`
           }}
         />
         {selectedVelocity !== null && (
           <div
+            className="velocity-display"
             style={{
-              position: 'absolute',
               top: `calc(50% + ${initialY}px - ${CANNON_HEIGHT / 2 + 5}px)`,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: `${FONT_SIZE}px`,
-              fontWeight: 'bold',
-              color: 'white',
-              textShadow: '0 0 8px rgba(255, 255, 255, 0.8), 0 0 16px rgba(255, 255, 255, 0.5)',
-              pointerEvents: 'none',
-              userSelect: 'none'
+              fontSize: `${FONT_SIZE}px`
             }}
           >
             {selectedVelocity.toString().replace('.', ',')} km/s
@@ -408,78 +392,48 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           <>
             {/* Linha horizontal cortando a superfície - centro no topo da Terra */}
             <div
+              className="distance-indicator-horizontal-line"
               style={{
-                position: 'absolute',
-                top: `calc(50% + ${-EARTH_RADIUS_PX}px)`,
-                left: '50%',
-                width: '200px',
-                height: '1px',
-                backgroundColor: 'white',
-                transform: 'translate(-50%, -50%)'
+                top: `calc(50% + ${-EARTH_RADIUS_PX}px)`
               }}
             />
             {/* Linha vertical da superfície até a altura do canhão - no extremo esquerdo da linha horizontal */}
             <div
+              className="distance-indicator-vertical-line"
               style={{
-                position: 'absolute',
                 top: `calc(50% + ${(initialY + (-EARTH_RADIUS_PX + 10)) / 2}px)`,
                 left: `calc(50% - 100px)`,
-                width: '1px',
-                height: `${Math.abs(initialY + EARTH_RADIUS_PX) - 10}px`,
-                backgroundColor: 'white',
-                transform: 'translateY(-50%)'
+                height: `${Math.abs(initialY + EARTH_RADIUS_PX) - 10}px`
               }}
             />
             {/* Seta para cima no topo da linha vertical */}
             <div
+              className="distance-indicator-arrow"
               style={{
-                position: 'absolute',
                 top: `calc(50% + ${initialY + ARROW_TOP_V_POSITION}px)`,
-                left: '50%',
-                transform: `translateX(calc(${ARROWS_H}px - 50%))`,
-                color: 'white',
-                fontSize: '10px',
-                lineHeight: '1',
-                pointerEvents: 'none',
-                userSelect: 'none',
-                textAlign: 'center',
-                width: '10px'
+                transform: `translateX(calc(${ARROWS_H}px - 50%))`
               }}
             >
               ▲
             </div>
             {/* Seta para baixo na base da linha vertical */}
             <div
+              className="distance-indicator-arrow"
               style={{
-                position: 'absolute',
                 top: `calc(50% + ${-EARTH_RADIUS_PX + ARROW_BOTTOM_V_POSITION}px)`,
-                left: '50%',
-                transform: `translateX(calc(${ARROWS_H}px - 50%))`,
-                color: 'white',
-                fontSize: '10px',
-                lineHeight: '1',
-                pointerEvents: 'none',
-                userSelect: 'none',
-                textAlign: 'center',
-                width: '10px'
+                transform: `translateX(calc(${ARROWS_H}px - 50%))`
               }}
             >
               ▼
             </div>
             {/* Texto "2.000 km" */}
             <div
+              className="distance-indicator-text"
               style={{
-                position: 'absolute',
                 top: `calc(50% + ${(initialY + (-EARTH_RADIUS_PX + 10)) / 2}px)`,
                 left: `calc(50% - 100px - 10px)`,
                 transform: 'translateX(-100%) translateY(-50%)',
-                fontSize: `${FONT_SIZE - 2}px`,
-                color: 'white',
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-                userSelect: 'none',
-                lineHeight: '1',
-                paddingRight: '10px'
+                fontSize: `${FONT_SIZE - 2}px`
               }}
             >
               {CANNON_DISTANCE_KM.toLocaleString('pt-BR')} km
@@ -497,19 +451,17 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             return null;
           }
           
+          // Usar posições com precisão decimal para movimento suave
+          // O navegador moderno suporta sub-pixel rendering, então não precisamos arredondar
+          // Isso elimina "soluços" causados por arredondamento
           return (
-            <div
+            <img
               key={bullet.id}
+              src={balaImage}
+              alt="Bala"
+              className="bullet"
               style={{
-                position: 'absolute',
-                left: `calc(50% + ${bullet.x}px)`,
-                top: `calc(50% + ${bullet.y}px)`,
-                width: '8px',
-                height: '8px',
-                backgroundColor: 'white',
-                borderRadius: '50%',
-                transform: 'translate(-50%, -50%)',
-                boxShadow: '0 0 4px white'
+                transform: `translate(calc(-50% + ${bullet.x}px), calc(-50% + ${bullet.y}px))`
               }}
             />
           );

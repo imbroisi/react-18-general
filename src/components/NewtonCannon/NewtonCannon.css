@@ -1,0 +1,129 @@
+.container {
+  background-color: black;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.earth-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.terra-image {
+  /* width e height serão definidos inline pois dependem de EARTH_DIAMETER */
+}
+
+.cannon-image {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  /* height e top serão definidos inline pois dependem de CANNON_HEIGHT e initialY */
+}
+
+.velocity-display {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 16px rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  user-select: none;
+  /* top e fontSize serão definidos inline pois dependem de initialY, CANNON_HEIGHT e FONT_SIZE */
+}
+
+.instructions-container {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: white;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1000;
+  /* fontSize será definido inline pois depende de FONT_SIZE */
+}
+
+.instructions-title {
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.instructions-table {
+  border-collapse: collapse;
+  /* fontSize será definido inline pois depende de FONT_SIZE */
+}
+
+.instructions-table td {
+  padding-bottom: 4px;
+}
+
+.instructions-table td:first-child {
+  padding-right: 12px;
+  text-align: center;
+}
+
+.distance-indicator-horizontal-line {
+  position: absolute;
+  left: 50%;
+  width: 200px;
+  height: 1px;
+  background-color: white;
+  transform: translate(-50%, -50%);
+  /* top será definido inline pois depende de EARTH_RADIUS_PX */
+}
+
+.distance-indicator-vertical-line {
+  position: absolute;
+  width: 1px;
+  background-color: white;
+  transform: translateY(-50%);
+  /* top, left e height serão definidos inline pois dependem de initialY e EARTH_RADIUS_PX */
+}
+
+.distance-indicator-arrow {
+  position: absolute;
+  left: 50%;
+  color: white;
+  font-size: 10px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  text-align: center;
+  width: 10px;
+  /* top e transform serão definidos inline pois dependem de initialY, EARTH_RADIUS_PX e ARROWS_H */
+}
+
+.distance-indicator-text {
+  position: absolute;
+  color: white;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+  padding-right: 10px;
+  /* top, left, transform e fontSize serão definidos inline pois dependem de initialY, EARTH_RADIUS_PX e FONT_SIZE */
+}
+
+.bullet {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: auto;
+  height: auto;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+  /* transform será definido inline pois depende de roundedX e roundedY calculados em runtime */
+}
+
