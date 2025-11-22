@@ -351,6 +351,10 @@ const NewtonCannon = (props: NewtonCannonProps) => {
                   </tr>
                 );
               })}
+              <tr>
+                <td style={{ paddingRight: '12px', paddingBottom: '4px', textAlign: 'center' }}>0</td>
+                <td style={{ paddingBottom: '4px' }}>desliga mostrador de velocidade</td>
+              </tr>
             </tbody>
           </table>
         </div>
