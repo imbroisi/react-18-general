@@ -26,9 +26,8 @@ const VELOCITY_BY_KEY: { [key: string]: number } = {
   "4": 4 , 
   "5": 5,  
   "6": 6,  
-  "7": 6.9,  
-  "8": 7.2,  
-  "0": 10,  
+  "7": 6.9,    
+  "9": 9.76,  
 };
 
 interface BulletState {
@@ -53,6 +52,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const [cannonWidth, setCannonWidth] = useState<number>(0);
   const [selectedVelocity, setSelectedVelocity] = useState<number | null>(null);
   const [showDistanceIndicator, setShowDistanceIndicator] = useState<boolean>(true);
+  const [showInstructions, setShowInstructions] = useState<boolean>(true);
   const cannonWidthRef = useRef<number>(0);
   const animationFrameRef = useRef<number | null>(null);
   const bulletIdCounter = useRef<number>(0);
@@ -133,11 +133,15 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     };
   }, [handleFire]);
 
-  // Listener para tecla "Esc" esconder/mostrar indicação de distância
+  // Listener para tecla "Esc" esconder/mostrar indicação de distância e "Espaço" para instruções
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setShowDistanceIndicator(prev => !prev);
+      }
+      if (event.key === ' ') {
+        event.preventDefault(); // Prevenir scroll da página
+        setShowInstructions(prev => !prev);
       }
     };
 
@@ -269,6 +273,11 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     };
   }, [bullets, cannonWidth, initialY]);
 
+  // Função para formatar velocidade (substituir ponto por vírgula)
+  const formatVelocity = (velocity: number): string => {
+    return velocity.toString().replace('.', ',');
+  };
+
   return (
     <div style={{
       backgroundColor: 'black',
@@ -280,6 +289,60 @@ const NewtonCannon = (props: NewtonCannonProps) => {
       justifyContent: 'center',
       position: 'relative'
     }}>
+      {/* Tabela de instruções na extrema esquerda */}
+      {showInstructions && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '20px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: `${FONT_SIZE - 2}px`,
+            color: 'white',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            zIndex: 1000
+          }}
+        >
+          <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>Instruções:</div>
+          <table
+            style={{
+              borderCollapse: 'collapse',
+              fontSize: `${FONT_SIZE - 2}px`
+            }}
+          >
+            <tbody>
+              <tr>
+                <td style={{ paddingRight: '12px', paddingBottom: '4px', textAlign: 'center' }}>Espaço</td>
+                <td style={{ paddingBottom: '4px' }}>liga/desliga instruções</td>
+              </tr>
+              <tr>
+                <td style={{ paddingRight: '12px', paddingBottom: '4px', textAlign: 'center' }}>Esc</td>
+                <td style={{ paddingBottom: '4px' }}>liga/desliga indicação altura</td>
+              </tr>
+              {Object.entries(VELOCITY_BY_KEY).sort(([a], [b]) => {
+                // Ordenar: números primeiro (1-9), depois 0
+                if (a === '0') return 1;
+                if (b === '0') return -1;
+                return a.localeCompare(b);
+              }).map(([key, velocity]) => {
+                let description = `dispara a ${formatVelocity(velocity)} km/s`;
+                if (velocity === 6.9) {
+                  description += ' (mínima velocidade orbital)';
+                } else if (velocity === 9.76) {
+                  description += ' (velocidade de escape)';
+                }
+                return (
+                  <tr key={key}>
+                    <td style={{ paddingRight: '12px', paddingBottom: '4px', textAlign: 'center' }}>{key}</td>
+                    <td style={{ paddingBottom: '4px' }}>{description}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
       <div style={{
         position: 'relative',
         display: 'flex',
