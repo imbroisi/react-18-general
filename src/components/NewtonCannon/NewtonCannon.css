@@ -37,6 +37,8 @@
   text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 16px rgba(255, 255, 255, 0.5);
   pointer-events: none;
   user-select: none;
+  white-space: nowrap;
+  z-index: 100;
   /* top e fontSize serão definidos inline pois dependem de initialY, CANNON_HEIGHT e FONT_SIZE */
 }
 

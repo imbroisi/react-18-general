@@ -13,7 +13,7 @@
 
 # video generation
 /video-frames
-/output.mp4
+/output.*
 
 # misc
 .DS_Store

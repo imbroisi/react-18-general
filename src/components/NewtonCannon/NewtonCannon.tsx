@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import terraImage from '../../images/terra.png';
+import planetaRochosoImage from '../../images/planeta-rochoso.png';
 import canhaoImage from '../../images/canhao.png';
 import balaImage from '../../images/bala.png';
 import './NewtonCannon.css';
@@ -13,12 +14,14 @@ const CANNON_DISTANCE_KM = 2000; // Distância da boca do canhão à superfície
 const GRAVITY_M_S2 = 9.8; // Gravidade em m/s²
 const GRAVITY_KM_S2 = GRAVITY_M_S2 / 1000; // Gravidade em km/s²
 const ANIMATION_SPEED = 100; // Multiplicador de velocidade da animação
-const VELOCITY_DISPLAY_DELAY = 200; // Delay em milissegundos para mostrar a velocidade (200ms)
+const VELOCITY_DISPLAY_DELAY = 500; // Delay em milissegundos para mostrar a velocidade (0,5 segundo)
 const FIRE_DELAY = 500; // Delay em milissegundos antes de disparar (1 segundo)
 const FONT_SIZE = 18; // Tamanho da fonte do texto de velocidade em pixels
 const ARROWS_H = -99.5; // Posição horizontal das setas (em pixels a partir do centro)
 const ARROW_TOP_V_POSITION = 1; // Ajuste vertical da seta de cima (em pixels)
 const ARROW_BOTTOM_V_POSITION = -9; // Ajuste vertical da seta de baixo (em pixels)
+const ROCK_PLANET_DIMENSION = 101; // Tamanho do planeta rochoso em percentagem (100% = mesmo tamanho da Terra)
+const SIZE_CHANGE_SPEED = 1; // Velocidade da mudança de tamanho do planeta em segundos (apenas para tecla "-")
 
 // Velocidades de disparo por tecla (em km/s)
 // Ajustadas para que a tecla '7' complete uma órbita em 15 segundos
@@ -57,14 +60,20 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const [selectedVelocity, setSelectedVelocity] = useState<number | null>(null);
   const [showDistanceIndicator, setShowDistanceIndicator] = useState<boolean>(true);
   const [showInstructions, setShowInstructions] = useState<boolean>(true);
+  const [showCannon, setShowCannon] = useState<boolean>(true);
+  const [useRockPlanet, setUseRockPlanet] = useState<boolean>(false);
+  const [planetSize, setPlanetSize] = useState<number>(100); // Tamanho do planeta em percentagem (100% = tamanho original)
+  const [targetPlanetSize, setTargetPlanetSize] = useState<number>(100); // Tamanho alvo do planeta para animação (apenas para tecla "-")
   const cannonWidthRef = useRef<number>(0);
   const animationFrameRef = useRef<number | null>(null);
   const bulletIdCounter = useRef<number>(0);
   const cannonRef = useRef<HTMLImageElement | null>(null);
   const isAnimatingRef = useRef<boolean>(false);
   const fireTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const planetSizeRef = useRef<number>(100);
 
   // Posição inicial da boca do canhão (centro da Terra + raio + distância)
+  // Usar sempre o raio original da Terra para manter o canhão, texto e balas fixos
   const cannonMouthDistancePx = CANNON_DISTANCE_KM * SCALE_KM_TO_PX;
   const initialY = -(EARTH_RADIUS_PX + cannonMouthDistancePx);
 
@@ -154,7 +163,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     };
   }, [handleFire]);
 
-  // Listener para tecla "Esc" esconder/mostrar indicação de distância e "Espaço" para instruções
+  // Listener para tecla "Esc" esconder/mostrar indicação de distância, "Espaço" para instruções, "x" para limpar e "y" para trocar planeta
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -164,13 +173,89 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         event.preventDefault(); // Prevenir scroll da página
         setShowInstructions(prev => !prev);
       }
+      if (event.key === 'x' || event.key === 'X') {
+        // Toggle: apagar/mostrar canhão, texto de velocidade e balas na superfície
+        if (showCannon) {
+          // Apagar canhão, texto de velocidade e balas na superfície
+          setShowCannon(false);
+          setSelectedVelocity(null);
+          // Remover balas que estão na superfície (não ativas)
+          setBullets(prev => prev.filter(bullet => bullet.isActive));
+        } else {
+          // Mostrar canhão novamente
+          setShowCannon(true);
+        }
+      }
+      if (event.key === 'y' || event.key === 'Y') {
+        // Trocar entre Terra e planeta rochoso
+        setUseRockPlanet(prev => {
+          const newValue = !prev;
+          // Resetar tamanho ao trocar de planeta
+          if (newValue) {
+            // Mudando para planeta rochoso: usar ROCK_PLANET_DIMENSION
+            setPlanetSize(ROCK_PLANET_DIMENSION);
+          } else {
+            // Mudando para Terra: usar 100%
+            setPlanetSize(100);
+          }
+          return newValue;
+        });
+      }
+      if (event.key === '-' || event.key === '_') {
+        // Diminuir planeta em 50% do tamanho atual (com animação suave)
+        setTargetPlanetSize(prev => {
+          const newSize = prev * 0.5;
+          return Math.max(newSize, 0.1); // Limite mínimo de 0.1% para evitar zero
+        });
+      }
+      if (event.key === '+' || event.key === '=') {
+        // Voltar suavemente para 100% do tamanho original (com animação)
+        setTargetPlanetSize(100);
+      }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, []);
+  }, [showCannon]);
+
+  // Atualizar ref quando planetSize mudar
+  useEffect(() => {
+    planetSizeRef.current = planetSize;
+  }, [planetSize]);
+
+  // Animação linear do tamanho do planeta (apenas para tecla "-")
+  useEffect(() => {
+    const startTime = performance.now();
+    const startSize = planetSizeRef.current;
+    const sizeDifference = targetPlanetSize - startSize;
+    const duration = SIZE_CHANGE_SPEED * 1000; // Converter segundos para milissegundos
+
+    // Se já está no tamanho alvo, não precisa animar
+    if (Math.abs(sizeDifference) < 0.01) {
+      return;
+    }
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1); // Clamp entre 0 e 1
+
+      // Interpolação linear
+      const newSize = startSize + (sizeDifference * progress);
+      setPlanetSize(newSize);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    const animationFrame = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [targetPlanetSize]); // Apenas quando o tamanho alvo mudar
 
   useEffect(() => {
     let lastFrameTime: number | null = null;
@@ -353,40 +438,60 @@ const NewtonCannon = (props: NewtonCannonProps) => {
                 <td>0</td>
                 <td>desliga mostrador de velocidade</td>
               </tr>
+              <tr>
+                <td>x</td>
+                <td>liga/desliga canhão, texto e balas na superfície</td>
+              </tr>
+              <tr>
+                <td>y</td>
+                <td>troca entre Terra e planeta rochoso</td>
+              </tr>
+              <tr>
+                <td>-</td>
+                <td>diminui tamanho do planeta (50%)</td>
+              </tr>
+              <tr>
+                <td>+</td>
+                <td>volta tamanho do planeta para 100%</td>
+              </tr>
             </tbody>
           </table>
         </div>
       )}
       <div className="earth-wrapper">
         <img 
-          src={terraImage} 
-          alt="Terra" 
+          src={useRockPlanet ? planetaRochosoImage : terraImage} 
+          alt={useRockPlanet ? "Planeta Rochoso" : "Terra"} 
           className="terra-image"
           style={{
-            width: `${EARTH_DIAMETER}px`,
-            height: `${EARTH_DIAMETER}px`
+            width: `${EARTH_DIAMETER * (planetSize / 100)}px`,
+            height: `${EARTH_DIAMETER * (planetSize / 100)}px`
           }}
         />
-        <img 
-          ref={cannonRef}
-          src={canhaoImage} 
-          alt="Canhão" 
-          className="cannon-image"
-          style={{ 
-            height: `${CANNON_HEIGHT}px`,
-            top: `calc(50% + ${initialY}px)`
-          }}
-        />
-        {selectedVelocity !== null && (
-          <div
-            className="velocity-display"
-            style={{
-              top: `calc(50% + ${initialY}px - ${CANNON_HEIGHT / 2 + 5}px)`,
-              fontSize: `${FONT_SIZE}px`
-            }}
-          >
-            {selectedVelocity.toString().replace('.', ',')} km/s
-          </div>
+        {showCannon && (
+          <>
+            <img 
+              ref={cannonRef}
+              src={canhaoImage} 
+              alt="Canhão" 
+              className="cannon-image"
+              style={{ 
+                height: `${CANNON_HEIGHT}px`,
+                top: `calc(50% + ${initialY}px)`
+              }}
+            />
+            {selectedVelocity !== null && (
+              <div
+                className="velocity-display"
+                style={{
+                  top: `calc(50% + ${initialY}px - ${CANNON_HEIGHT / 2 + 5}px)`,
+                  fontSize: `${FONT_SIZE}px`
+                }}
+              >
+                {selectedVelocity.toString().replace('.', ',')} km/s
+              </div>
+            )}
+          </>
         )}
         {showDistanceIndicator && (
           <>
