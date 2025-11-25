@@ -19,39 +19,39 @@ const VIDEO_OUTPUT = path.join(__dirname, `../output.${VIDEO_FORMAT}`);
 const VIDEO_SCRIPT = [
   {
     wait: 0, // imediatamente, sem espera
-    key: 'Space',
+    key: 'z',
   },
   {
-    wait: 1, // em segundos
-    key: 'Escape',
+    wait: 0.1, // em segundos
+    key: 'x',
   },
   {
-    wait: 1,
-    key: '1',
-  },
-  {
-    wait: 2,
-    key: '2',
-  },
-  {
-    wait: 3,
-    key: '3',
-  },
-  {
-    wait: 4,
-    key: '4',
-  },
-  {
-    wait: 5,
-    key: '6',
-  },
-  {
-    wait: 5,
-    key: '9',
-  },
-  {
-    wait: 5,
+    wait: 0.5,
     key: '7',
+  },
+  {
+    wait: 15,
+    key: 'y',
+  },
+  {
+    wait: 6,
+    key: '-',
+  },
+  {
+    wait: 10,
+    key: '-',
+  },
+  {
+    wait: 5,
+    key: '-',
+  },
+  {
+    wait: 5,
+    key: '-',
+  },
+  {
+    wait: 5,
+    key: '-', // estrela neutrons
   },
 ];
 
@@ -210,19 +210,6 @@ async function generateVideo() {
     console.log('🎬 Gerando vídeo com FFmpeg...');
 
     // Gerar vídeo usando FFmpeg com timebase e metadados explícitos
-    // -r ${FPS}: taxa de frames de entrada
-    // -r ${FPS}: taxa de frames de saída (explicitamente definida)
-    // -frames:v ${TOTAL_FRAMES}: número exato de frames no vídeo (garante duração correta)
-    // -s ${RESOLUTION}: resolução do vídeo de saída
-    // -f ${VIDEO_FORMAT}: formato de saída (mp4, mov, avi, mkv, webm)
-    // -vsync cfr: frame rate constante (constant frame rate)
-    // -fflags +genpts: gerar timestamps corretos
-    // -video_track_timescale: definir timebase explicitamente
-    //   - Para MP4: usar 90000 (padrão do MP4, melhor compatibilidade)
-    //   - Para outros formatos: usar FPS * 1000
-    // -movflags +faststart: mover metadados para o início do arquivo (melhor compatibilidade, apenas para mp4/mov)
-    // -write_tmcd 0: desabilitar timecode track (pode causar problemas em alguns editores, apenas para mov)
-    // -avoid_negative_ts make_zero: evitar timestamps negativos
     const movFlags = (VIDEO_FORMAT === 'mp4' || VIDEO_FORMAT === 'mov') ? '-movflags +faststart' : '';
     const tmcdFlag = VIDEO_FORMAT === 'mov' ? '-write_tmcd 0' : '';
     // Timebase padrão do MP4 é 90000, não FPS * 1000

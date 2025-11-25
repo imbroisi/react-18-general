@@ -15,6 +15,19 @@
 /video-frames
 /output.*
 
+# video files
+*.mp4
+
+# image files (but not src/images)
+*.png
+!src/images/*.png
+
+# image directories (but not src/images)
+**/images/
+!src/images/
+**/image/
+!src/image/
+
 # misc
 .DS_Store
 .env.local
