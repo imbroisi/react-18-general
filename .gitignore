@@ -17,6 +17,7 @@
 
 # video files
 *.mp4
+*.mov
 
 # image files (but not src/images)
 *.png

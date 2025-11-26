@@ -752,7 +752,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
               top: '50%',
               transform: 'translate(-50%, -50%)',
               width: `${EARTH_DIAMETER}px`,
-              height: `${EARTH_DIAMETER}px`
+              height: `${EARTH_DIAMETER}px`,
+              zIndex: 5
             }}
           />
           <div
@@ -857,7 +858,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             height: `${(EARTH_DIAMETER + 80) * (planetSize / 100)}px`,
             objectFit: 'contain',
             pointerEvents: 'none',
-            userSelect: 'none'
+            userSelect: 'none',
+            zIndex: 1
           }}
         />
       )}

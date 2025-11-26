@@ -2,6 +2,40 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const http = require('http');
+
+/**
+ * INSTRUÇÕES PARA GERAR VÍDEO DO SOL COM FUNDO TRANSPARENTE:
+ * 
+ * Para preservar a transparência dos frames PNG do Sol no vídeo final:
+ * 1. Altere VIDEO_FORMAT abaixo para 'mov' (MP4 não suporta transparência)
+ * 2. Ao compilar os frames com FFmpeg, use ProRes 4444 para preservar o canal alpha
+ * 3. ProRes 4444 preserva o canal alpha (transparência)
+ * 
+ * Exemplo de comando FFmpeg para preservar transparência:
+ *   -c:v prores_ks -pix_fmt yuva444p10le -profile:v 4444
+ * 
+ * Nota: Se os frames PNG do Sol têm fundo transparente, o vídeo MOV gerado
+ * também terá transparência preservada, permitindo composição sobre outros elementos.
+ * 
+ * IMPORTANTE: O Puppeteer captura exatamente o que o navegador renderiza.
+ * Se os frames PNG do Sol têm transparência, ela será preservada no screenshot
+ * e as áreas transparentes mostrarão o que está atrás (fundo, outros elementos).
+ * 
+ * COMO GERAR VÍDEO DO SOL NO FILMORA COM TRANSPARÊNCIA:
+ * 
+ * 1. Importe os frames PNG do Sol no Filmora (pasta public/sun-frames)
+ * 2. Arraste os frames para a timeline na ordem correta
+ * 3. Configure a exportação:
+ *    - Formato: MOV (QuickTime)
+ *    - Codec: ProRes 4444 (ou ProRes 422 HQ se 4444 não estiver disponível)
+ *    - Resolução: 1920x1080 (ou a resolução desejada)
+ *    - FPS: 30 (ou o FPS dos frames)
+ * 4. Certifique-se de que a opção "Preservar transparência" ou "Alpha Channel" está ativada
+ * 5. Exporte o vídeo
+ * 
+ * Nota: ProRes 4444 é o codec recomendado pois preserva o canal alpha completo.
+ */
 
 const OUTPUT_DIR = path.join(__dirname, '../video-frames');
 const FPS = 60; // Frames por segundo
@@ -11,6 +45,7 @@ const APP_URL = 'http://localhost:3000'; // URL da aplicação React
 const RESOLUTION = '1920x1080'; // Resolução do vídeo (1080p)
 
 // Formato do vídeo de saída. Valores válidos: 'mp4', 'mov', 'avi', 'mkv', 'webm'
+// IMPORTANTE: Para preservar transparência, use 'mov' e ajuste o codec para ProRes 4444
 const VIDEO_FORMAT = 'mp4';
 
 const VIDEO_OUTPUT = path.join(__dirname, `../output.${VIDEO_FORMAT}`);
@@ -60,8 +95,54 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Verificar se o servidor está rodando
+async function checkServerRunning(url) {
+  return new Promise((resolve) => {
+    const urlObj = new URL(url);
+    const port = urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80);
+    const options = {
+      hostname: urlObj.hostname,
+      port: port,
+      path: '/',
+      method: 'GET', // Mudado para GET que é mais compatível
+      timeout: 3000
+    };
+    
+    const req = http.request(options, (res) => {
+      // Qualquer status code significa que o servidor está respondendo
+      resolve(true);
+      req.destroy();
+    });
+    
+    req.on('error', (err) => {
+      // Log do erro para debug
+      console.log(`   Erro na verificação: ${err.message}`);
+      resolve(false);
+    });
+    
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+    
+    req.setTimeout(3000);
+    req.end();
+  });
+}
+
 async function generateVideo() {
   console.log('🚀 Iniciando geração de vídeo...');
+  
+  // Verificar se o servidor está rodando (mas não bloquear se falhar)
+  console.log(`🔍 Verificando se o servidor está rodando em ${APP_URL}...`);
+  const serverRunning = await checkServerRunning(APP_URL);
+  if (!serverRunning) {
+    console.warn(`⚠️  Aviso: Não foi possível verificar se o servidor está rodando`);
+    console.warn('   Continuando mesmo assim... (o Puppeteer tentará conectar)');
+    console.warn('   Se falhar, certifique-se de que a aplicação React está rodando: npm start');
+  } else {
+    console.log('✅ Servidor está rodando!');
+  }
   
   // Criar diretório para frames e limpar completamente
   if (fs.existsSync(OUTPUT_DIR)) {
@@ -99,10 +180,25 @@ async function generateVideo() {
     });
 
     console.log(`📡 Carregando página: ${APP_URL}`);
-    await page.goto(APP_URL, {
-      waitUntil: 'networkidle0',
-      timeout: 30000
-    });
+    try {
+      await page.goto(APP_URL, {
+        waitUntil: 'domcontentloaded', // Menos restritivo que networkidle0
+        timeout: 30000
+      });
+    } catch (error) {
+      if (error.message.includes('net::ERR_CONNECTION_REFUSED')) {
+        console.error(`❌ Erro: Não foi possível conectar a ${APP_URL}`);
+        console.error('   Certifique-se de que a aplicação React está rodando:');
+        console.error('   Execute: npm start');
+        throw error;
+      }
+      // Tentar novamente com load
+      console.warn('⚠️  Primeira tentativa falhou, tentando novamente...');
+      await page.goto(APP_URL, {
+        waitUntil: 'load',
+        timeout: 30000
+      });
+    }
 
     // Aguardar a aplicação React carregar completamente
     console.log('⏳ Aguardando aplicação React carregar...');
@@ -183,9 +279,13 @@ async function generateVideo() {
         });
       });
       
+      // Screenshot captura exatamente o que o navegador renderiza
+      // Se os frames PNG do Sol têm transparência, ela será preservada no screenshot
+      // As áreas transparentes mostrarão o que está atrás (fundo, outros elementos)
       const screenshot = await page.screenshot({
         type: 'png',
-        fullPage: false
+        fullPage: false,
+        // PNG preserva transparência se existir na renderização do navegador
       });
       
       const framePath = path.join(OUTPUT_DIR, `frame-${String(frame).padStart(6, '0')}.png`);

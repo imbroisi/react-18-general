@@ -23,6 +23,9 @@ function parseArgs() {
     console.log('');
     console.log('  Exemplo:');
     console.log('    node scripts/split-video-to-frames.js --url "https://example.com/video.mp4"');
+    console.log('    node scripts/split-video-to-frames.js --url "https://example.com/video.mov"');
+    console.log('');
+    console.log('  Formatos suportados: MP4, MOV');
     process.exit(0);
   }
   
@@ -53,15 +56,18 @@ function downloadVideoFromUrl(url, outputPath) {
   }
 }
 
-// Função para listar arquivos MP4 no diretório de origem
-function findMp4Files(dir) {
+// Função para listar arquivos de vídeo (MP4 e MOV) no diretório de origem
+function findVideoFiles(dir) {
   if (!fs.existsSync(dir)) {
     console.error(`❌ Diretório não encontrado: ${dir}`);
     return [];
   }
   
   const files = fs.readdirSync(dir);
-  return files.filter(file => file.toLowerCase().endsWith('.mp4'));
+  return files.filter(file => {
+    const lower = file.toLowerCase();
+    return lower.endsWith('.mp4') || lower.endsWith('.mov');
+  });
 }
 
 // Função para extrair frames de um vídeo
@@ -77,7 +83,8 @@ function extractFrames(videoPath, outputDir) {
   try {
     // Extrair todos os frames usando FFmpeg
     // %06d garante que os frames terão 6 dígitos (frame-000001.png, frame-000002.png, etc.)
-    const ffmpegCommand = `ffmpeg -i "${videoPath}" -vf "fps=30" "${path.join(outputDir, 'frame-%06d.png')}"`;
+    // -pix_fmt rgba preserva o canal alpha (transparência) se existir no vídeo
+    const ffmpegCommand = `ffmpeg -i "${videoPath}" -vf "fps=30" -pix_fmt rgba "${path.join(outputDir, 'frame-%06d.png')}"`;
     
     console.log('⏳ Processando...');
     execSync(ffmpegCommand, { stdio: 'inherit' });
@@ -95,7 +102,7 @@ function extractFrames(videoPath, outputDir) {
 
 // Função principal
 function main() {
-  console.log('🎬 Iniciando extração de frames de vídeos MP4...\n');
+  console.log('🎬 Iniciando extração de frames de vídeos (MP4/MOV)...\n');
   
   const args = parseArgs();
   let totalFrames = 0;
@@ -136,6 +143,7 @@ function main() {
     // Gerar nome do arquivo a partir da URL
     const urlObj = new URL(args.url);
     const urlPath = urlObj.pathname;
+    // Manter a extensão original ou usar .mp4 como padrão
     const urlFileName = path.basename(urlPath) || 'video-from-url.mp4';
     const localVideoPath = path.join(SOURCE_DIR, urlFileName);
     
@@ -163,31 +171,31 @@ function main() {
     if (!fs.existsSync(SOURCE_DIR)) {
       console.log(`📁 Criando diretório de origem: ${SOURCE_DIR}`);
       fs.mkdirSync(SOURCE_DIR, { recursive: true });
-      console.log('⚠️  Coloque os arquivos MP4 no diretório mp4-source e execute o script novamente.');
+      console.log('⚠️  Coloque os arquivos MP4 ou MOV no diretório mp4-source e execute o script novamente.');
       console.log('   Ou use --url para processar um vídeo de uma URL.');
       return;
     }
     
-    // Encontrar todos os arquivos MP4
-    const mp4Files = findMp4Files(SOURCE_DIR);
+    // Encontrar todos os arquivos de vídeo (MP4 e MOV)
+    const videoFiles = findVideoFiles(SOURCE_DIR);
     
-    if (mp4Files.length === 0) {
-      console.log('⚠️  Nenhum arquivo MP4 encontrado no diretório mp4-source');
-      console.log(`   Coloque os arquivos MP4 em: ${SOURCE_DIR}`);
+    if (videoFiles.length === 0) {
+      console.log('⚠️  Nenhum arquivo MP4 ou MOV encontrado no diretório mp4-source');
+      console.log(`   Coloque os arquivos MP4 ou MOV em: ${SOURCE_DIR}`);
       console.log('   Ou use --url <URL> para processar um vídeo de uma URL.');
       return;
     }
     
-    console.log(`📹 Encontrados ${mp4Files.length} arquivo(s) MP4:\n`);
-    mp4Files.forEach((file, index) => {
+    console.log(`📹 Encontrados ${videoFiles.length} arquivo(s) de vídeo:\n`);
+    videoFiles.forEach((file, index) => {
       console.log(`   ${index + 1}. ${file}`);
     });
     console.log('');
     
     // Processar cada vídeo
-    mp4Files.forEach((file, index) => {
+    videoFiles.forEach((file, index) => {
       const videoPath = path.join(SOURCE_DIR, file);
-      console.log(`\n[${index + 1}/${mp4Files.length}] Processando: ${file}`);
+      console.log(`\n[${index + 1}/${videoFiles.length}] Processando: ${file}`);
       console.log('─'.repeat(50));
       
       const frames = extractFrames(videoPath, OUTPUT_DIR);
