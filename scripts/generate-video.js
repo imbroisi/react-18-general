@@ -30,7 +30,7 @@ const http = require('http');
  *    - Formato: MOV (QuickTime)
  *    - Codec: ProRes 4444 (ou ProRes 422 HQ se 4444 não estiver disponível)
  *    - Resolução: 1920x1080 (ou a resolução desejada)
- *    - FPS: 30 (ou o FPS dos frames)
+ *    - FPS: 60 (ou o FPS dos frames)
  * 4. Certifique-se de que a opção "Preservar transparência" ou "Alpha Channel" está ativada
  * 5. Exporte o vídeo
  * 

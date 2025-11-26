@@ -24,7 +24,7 @@ const { execSync } = require('child_process');
  *    - Formato: MOV (QuickTime)
  *    - Codec: ProRes 4444 (ou ProRes 422 HQ se 4444 não estiver disponível)
  *    - Resolução: 1920x1080 (ou a resolução desejada)
- *    - FPS: 30 (ou o FPS dos frames)
+ *    - FPS: 60 (ou o FPS dos frames)
  * 4. Certifique-se de que a opção "Preservar transparência" ou "Alpha Channel" está ativada
  * 5. Exporte o vídeo
  * 
@@ -32,7 +32,7 @@ const { execSync } = require('child_process');
  */
 
 const INPUT_DIR = path.join(__dirname, '../splited-frames'); // Diretório com os frames existentes
-const FPS = 30; // Frames por segundo (ajustar conforme necessário, ou deixar null para calcular automaticamente)
+const FPS = 60; // Frames por segundo (ajustar conforme necessário, ou deixar null para calcular automaticamente)
 const LOOP_DURATION_SECONDS = 5; // Duração de um loop em segundos (usado apenas se FPS for null)
 const RESOLUTION = '1920x1080'; // Resolução do vídeo (1080p)
 

@@ -166,6 +166,43 @@ function runSplit(fileName) {
 }
 
 /**
+ * Executa o script de geração de vídeo final (generate-video.js),
+ * que usa o Puppeteer + FFmpeg para capturar o app React em execução.
+ */
+function runGenerateVideo() {
+  const generateScript = path.join(
+    __dirname,
+    "scripts",
+    "generate-video.js"
+  );
+
+  if (!fs.existsSync(generateScript)) {
+    console.error(
+      `Aviso: script generate-video.js não encontrado em ${generateScript}.`
+    );
+    return;
+  }
+
+  console.log(
+    "Iniciando geração do vídeo final com scripts/generate-video.js..."
+  );
+
+  try {
+    execSync(`node "${generateScript}"`, { stdio: "inherit" });
+    // Caminho de saída padrão do generate-video.js (mantido em sincronia com o script)
+    const outputPath = path.join(__dirname, "output.mp4");
+    console.log("Geração do vídeo final concluída com sucesso.");
+    console.log(
+      `Arquivo de vídeo gerado em:\n  ${outputPath}`
+    );
+  } catch (err) {
+    console.error(
+      `Erro ao executar generate-video.js: ${err.message}`
+    );
+  }
+}
+
+/**
  * Dobra a quantidade de frames gerados criando frames intermediários
  * entre os frames existentes, usando FFmpeg (minterpolate).
  *
@@ -383,12 +420,15 @@ async function main() {
     }
 
     // Executar o split para o arquivo recém-baixado
-    runSplit(fileName);
+    runSplit(finalFileName);
 
     // Opcionalmente, interpolar frames (dobrar quantidade)
     if (doubleFrames) {
       doubleFramesWithInterpolation();
     }
+
+    // Gerar o vídeo final a partir dos frames (usa o app React)
+    runGenerateVideo();
 
     return;
   }
@@ -421,6 +461,9 @@ async function main() {
     if (doubleFrames) {
       doubleFramesWithInterpolation();
     }
+
+    // Gerar o vídeo final a partir dos frames (usa o app React)
+    runGenerateVideo();
 
     return;
   }

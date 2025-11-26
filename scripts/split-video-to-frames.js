@@ -84,7 +84,8 @@ function extractFrames(videoPath, outputDir) {
     // Extrair todos os frames usando FFmpeg
     // %06d garante que os frames terão 6 dígitos (frame-000001.png, frame-000002.png, etc.)
     // -pix_fmt rgba preserva o canal alpha (transparência) se existir no vídeo
-    const ffmpegCommand = `ffmpeg -i "${videoPath}" -vf "fps=30" -pix_fmt rgba "${path.join(outputDir, 'frame-%06d.png')}"`;
+    // Usar fps=60 para compatibilizar com o vídeo final gerado em 60 FPS
+    const ffmpegCommand = `ffmpeg -i "${videoPath}" -vf "fps=60" -pix_fmt rgba "${path.join(outputDir, 'frame-%06d.png')}"`;
     
     console.log('⏳ Processando...');
     execSync(ffmpegCommand, { stdio: 'inherit' });

@@ -46,7 +46,7 @@ const SUN_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_SUN) / SUN_RADIUS_M) / 1000; 
 // Velocidades orbitais ajustadas para reduzir acentuação da parábola (92% da velocidade orbital)
 const EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S = EARTH_ORBITAL_VELOCITY_KM_S * 0.92;
 const SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S = SUN_ORBITAL_VELOCITY_KM_S * 0.92;
-const ANIMATION_SPEED = 1000; // Multiplicador de velocidade da animação
+const ANIMATION_SPEED = 100; // Multiplicador de velocidade da animação
 const VELOCITY_DISPLAY_DELAY = 500; // Delay em milissegundos para mostrar a velocidade (0,5 segundo)
 const FIRE_DELAY = 500; // Delay em milissegundos antes de disparar (1 segundo)
 const FONT_SIZE = 18; // Tamanho da fonte do texto de velocidade em pixels
@@ -185,7 +185,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
 
     // Número total de frames (ajustar conforme necessário)
     const TOTAL_SUN_FRAMES = 601; // Ajustar baseado nos frames disponíveis
-    const FPS = 30; // Frames por segundo
+    // Reduzir FPS para deixar a rotação mais lenta (especialmente após dobrar frames)
+    const FPS = 15; // Frames por segundo
     const FRAME_INTERVAL = 1000 / FPS; // Intervalo em milissegundos
 
     // Iniciar animação
@@ -330,6 +331,16 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           setShowSun(false);
           setUseRockPlanet(true);
           setPlanetSize(ROCK_PLANET_DIMENSION);
+        }
+
+        // Sempre limpar todas as balas ao trocar entre Terra / planeta rochoso / Sol
+        setBullets([]);
+
+        // Desligar o indicador de velocidade e cancelar disparo agendado, se houver
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
         }
       }
       if (event.key === '-' || event.key === '_') {
