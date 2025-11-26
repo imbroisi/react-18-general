@@ -847,7 +847,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
       {/* Sol */}
       {showSun && (
         <img
-          src={`/sun-frames/frame-${String(sunFrameIndex).padStart(6, '0')}.png`}
+          src={`/video-element-frames/frame-${String(sunFrameIndex).padStart(6, '0')}.png`}
           alt="Sol animado"
           style={{
             position: 'absolute',

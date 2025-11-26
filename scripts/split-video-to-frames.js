@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const SOURCE_DIR = path.join(__dirname, '../mp4-source');
-const OUTPUT_DIR = path.join(__dirname, '../public/sun-frames');
+const SOURCE_DIR = path.join(__dirname, '../src/video-element-src');
+const OUTPUT_DIR = path.join(__dirname, '../public/video-element-frames');
 
 // Função para parsear argumentos da linha de comando
 function parseArgs() {
@@ -18,7 +18,7 @@ function parseArgs() {
     console.log('    node scripts/split-video-to-frames.js --url <URL>');
     console.log('    node scripts/split-video-to-frames.js -u <URL>');
     console.log('');
-    console.log('  Processar vídeos locais (do diretório mp4-source):');
+    console.log('  Processar vídeos locais (do diretório video-element-src):');
     console.log('    node scripts/split-video-to-frames.js');
     console.log('');
     console.log('  Exemplo:');
@@ -171,7 +171,7 @@ function main() {
     if (!fs.existsSync(SOURCE_DIR)) {
       console.log(`📁 Criando diretório de origem: ${SOURCE_DIR}`);
       fs.mkdirSync(SOURCE_DIR, { recursive: true });
-      console.log('⚠️  Coloque os arquivos MP4 ou MOV no diretório mp4-source e execute o script novamente.');
+      console.log('⚠️  Coloque os arquivos MP4 ou MOV no diretório video-element-src e execute o script novamente.');
       console.log('   Ou use --url para processar um vídeo de uma URL.');
       return;
     }
@@ -180,7 +180,7 @@ function main() {
     const videoFiles = findVideoFiles(SOURCE_DIR);
     
     if (videoFiles.length === 0) {
-      console.log('⚠️  Nenhum arquivo MP4 ou MOV encontrado no diretório mp4-source');
+      console.log('⚠️  Nenhum arquivo MP4 ou MOV encontrado no diretório video-element-src');
       console.log(`   Coloque os arquivos MP4 ou MOV em: ${SOURCE_DIR}`);
       console.log('   Ou use --url <URL> para processar um vídeo de uma URL.');
       return;
