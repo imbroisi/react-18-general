@@ -83,7 +83,7 @@ function downloadFile(url, destPath) {
  * Faz o parse dos argumentos de linha de comando.
  *
  * Formato esperado:
- *   node build_all.js [--file|-f <nome-do-arquivo.mp4>] [--url|-u <URL>] [--double-frames|-d] [--help|-h]
+ *   node build_all.js [--file|-f <nome-do-arquivo.mp4>] [--url|-u <URL>] [--double-frames|-d] [--duration|-t <segundos>] [--help|-h]
  */
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -92,6 +92,8 @@ function parseArgs() {
     doubleFrames: false,
     help: false,
     url: null,
+    duration: null,
+    animationSpeed: null,
     unknownArg: null,
   };
 
@@ -121,6 +123,38 @@ function parseArgs() {
         i++; // consumir o valor
       } else {
         console.error('Erro: o parâmetro --url/-u requer um valor (ex.: --url "https://.../video.mp4").');
+        result.help = true;
+        break;
+      }
+    } else if (arg === "--duration" || arg === "-t") {
+      const next = args[i + 1];
+      if (next && !next.startsWith("-")) {
+        const duration = parseFloat(next);
+        if (isNaN(duration) || duration <= 0) {
+          console.error('Erro: o parâmetro --duration/-t requer um número positivo (ex.: --duration 60).');
+          result.help = true;
+          break;
+        }
+        result.duration = duration;
+        i++; // consumir o valor
+      } else {
+        console.error('Erro: o parâmetro --duration/-t requer um valor (ex.: --duration 60).');
+        result.help = true;
+        break;
+      }
+    } else if (arg === "--animation-speed" || arg === "-a") {
+      const next = args[i + 1];
+      if (next && !next.startsWith("-")) {
+        const speed = parseFloat(next);
+        if (isNaN(speed) || speed <= 0) {
+          console.error('Erro: o parâmetro --animation-speed/-a requer um número positivo (ex.: --animation-speed 1000).');
+          result.help = true;
+          break;
+        }
+        result.animationSpeed = speed;
+        i++; // consumir o valor
+      } else {
+        console.error('Erro: o parâmetro --animation-speed/-a requer um valor (ex.: --animation-speed 1000).');
         result.help = true;
         break;
       }
@@ -166,10 +200,44 @@ function runSplit(fileName) {
 }
 
 /**
+ * Mostra o tempo total de processamento e horário de encerramento.
+ * @param {number} startTime - Timestamp de início (Date.now())
+ */
+function showProcessingSummary(startTime) {
+  const endTime = Date.now();
+  const totalTimeMs = endTime - startTime;
+  const totalTimeSeconds = Math.floor(totalTimeMs / 1000);
+  const totalTimeMinutes = Math.floor(totalTimeSeconds / 60);
+  const remainingSeconds = totalTimeSeconds % 60;
+  const remainingMs = totalTimeMs % 1000;
+
+  const endDate = new Date(endTime);
+  
+  console.log("");
+  console.log("=".repeat(60));
+  console.log("✅ Processamento concluído com sucesso!");
+  console.log("");
+  
+  // Formatar tempo total
+  let timeFormatted = "";
+  if (totalTimeMinutes > 0) {
+    timeFormatted = `${totalTimeMinutes} minuto(s) e ${remainingSeconds} segundo(s)`;
+  } else {
+    timeFormatted = `${totalTimeSeconds}.${Math.floor(remainingMs / 100)} segundo(s)`;
+  }
+  
+  console.log(`⏱️  Tempo total de processamento: ${timeFormatted}`);
+  console.log(`🕐 Horário de encerramento: ${endDate.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+  console.log("=".repeat(60));
+}
+
+/**
  * Executa o script de geração de vídeo final (generate-video.js),
  * que usa o Puppeteer + FFmpeg para capturar o app React em execução.
+ * @param {number|null} durationSeconds - Duração do vídeo em segundos (opcional)
+ * @param {number|null} animationSpeed - Velocidade de animação (ANIMATION_SPEED) para o gerador (opcional)
  */
-function runGenerateVideo() {
+function runGenerateVideo(durationSeconds = null, animationSpeed = null) {
   const generateScript = path.join(
     __dirname,
     "scripts",
@@ -188,7 +256,11 @@ function runGenerateVideo() {
   );
 
   try {
-    execSync(`node "${generateScript}"`, { stdio: "inherit" });
+    // Passar duração como argumento se especificada
+    const durationArg = durationSeconds !== null ? `--duration ${durationSeconds}` : '';
+    const speedArg = animationSpeed !== null ? `--animation-speed ${animationSpeed}` : '';
+    const args = [durationArg, speedArg].filter(arg => arg !== '').join(' ');
+    execSync(`node "${generateScript}" ${args}`.trim(), { stdio: "inherit" });
     // Caminho de saída padrão do generate-video.js (mantido em sincronia com o script)
     const outputPath = path.join(__dirname, "output.mp4");
     console.log("Geração do vídeo final concluída com sucesso.");
@@ -288,9 +360,14 @@ function doubleFramesWithInterpolation() {
 }
 
 async function main() {
+  const startTime = Date.now();
+  globalStartTime = startTime; // Armazenar globalmente para uso no catch
+  const startDate = new Date();
   console.log("Iniciando build_all.js...");
+  console.log(`⏰ Horário de início: ${startDate.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+  console.log("");
 
-  const { fileName, doubleFrames, help, url, unknownArg } = parseArgs();
+  const { fileName, doubleFrames, help, url, duration, animationSpeed, unknownArg } = parseArgs();
 
   if (help) {
     if (unknownArg) {
@@ -322,18 +399,27 @@ async function main() {
     console.log("");
     console.log("Parâmetros opcionais:");
     console.log(
-      "  --file, -f <nome>   Define o nome do arquivo local a ser salvo/baixado (S3)."
+      "  --file, -f <nome>      Define o nome do arquivo local a ser salvo/baixado (S3)."
     );
     console.log(
-      "  --double-frames, -d  Dobra a quantidade de frames gerados, criando frames intermediários"
+      "  --double-frames, -d    Dobra a quantidade de frames gerados, criando frames intermediários"
     );
     console.log(
-      "  --url, -u <URL>      Define explicitamente a URL do vídeo a ser baixado."
+      "                        (usa FFmpeg/minterpolate após a geração dos frames PNG)."
     );
     console.log(
-      "                    (usa FFmpeg/minterpolate após a geração dos frames PNG)."
+      "  --url, -u <URL>        Define explicitamente a URL do vídeo a ser baixado."
     );
-    console.log("  --help, -h        Mostra esta ajuda.");
+    console.log(
+      "  --duration, -t <seg>      Define a duração do vídeo final em segundos (padrão: 188)."
+    );
+    console.log(
+      "  --animation-speed, -a <n>  Define a velocidade de animação (ANIMATION_SPEED) para o gerador de vídeo"
+    );
+    console.log(
+      "                            (padrão: usa o valor do código, 100). Exemplo: --animation-speed 1000"
+    );
+    console.log("  --help, -h              Mostra esta ajuda.");
     console.log("");
     process.exit(0);
   }
@@ -428,8 +514,10 @@ async function main() {
     }
 
     // Gerar o vídeo final a partir dos frames (usa o app React)
-    runGenerateVideo();
+    runGenerateVideo(duration, animationSpeed);
 
+    // Mostrar resumo do processamento
+    showProcessingSummary(startTime);
     return;
   }
 
@@ -446,6 +534,7 @@ async function main() {
         ", "
       )}`
     );
+    showProcessingSummary(startTime);
     process.exit(1);
   }
 
@@ -463,8 +552,10 @@ async function main() {
     }
 
     // Gerar o vídeo final a partir dos frames (usa o app React)
-    runGenerateVideo();
+    runGenerateVideo(duration, animationSpeed);
 
+    // Mostrar resumo do processamento
+    showProcessingSummary(startTime);
     return;
   }
 
@@ -473,11 +564,38 @@ async function main() {
     "Erro: não há arquivos em src/video-element-src e nenhum nome de arquivo foi especificado.\n" +
       "Uso: node build_all.js <nome-do-arquivo.mp4>"
   );
+  showProcessingSummary(startTime);
   process.exit(1);
 }
 
+// Armazenar startTime globalmente para uso no catch
+let globalStartTime = null;
+
 main().catch((err) => {
-  console.error("Erro inesperado:", err);
+  const endTime = Date.now();
+  const startTime = globalStartTime || endTime;
+  const totalTimeMs = endTime - startTime;
+  const totalTimeSeconds = Math.floor(totalTimeMs / 1000);
+  const totalTimeMinutes = Math.floor(totalTimeSeconds / 60);
+  const remainingSeconds = totalTimeSeconds % 60;
+  
+  const endDate = new Date(endTime);
+  
+  console.error("");
+  console.error("=".repeat(60));
+  console.error("❌ Erro inesperado:", err);
+  console.error("");
+  
+  let timeFormatted = "";
+  if (totalTimeMinutes > 0) {
+    timeFormatted = `${totalTimeMinutes} minuto(s) e ${remainingSeconds} segundo(s)`;
+  } else {
+    timeFormatted = `${totalTimeSeconds} segundo(s)`;
+  }
+  
+  console.error(`⏱️  Tempo de processamento antes do erro: ${timeFormatted}`);
+  console.error(`🕐 Horário de encerramento: ${endDate.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+  console.error("=".repeat(60));
   process.exit(1);
 });
 

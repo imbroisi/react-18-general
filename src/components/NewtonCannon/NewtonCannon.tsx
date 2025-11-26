@@ -46,7 +46,25 @@ const SUN_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_SUN) / SUN_RADIUS_M) / 1000; 
 // Velocidades orbitais ajustadas para reduzir acentuação da parábola (92% da velocidade orbital)
 const EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S = EARTH_ORBITAL_VELOCITY_KM_S * 0.92;
 const SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S = SUN_ORBITAL_VELOCITY_KM_S * 0.92;
-const ANIMATION_SPEED = 100; // Multiplicador de velocidade da animação
+const ANIMATION_SPEED_BROWSER = 1200; // Multiplicador de velocidade da animação no browser (padrão)
+
+// Ler ANIMATION_SPEED da query string se disponível, senão usar padrão do browser
+const getAnimationSpeed = (): number => {
+  if (typeof window === 'undefined') {
+    return ANIMATION_SPEED_BROWSER; // Valor padrão se window não estiver disponível (SSR)
+  }
+  const urlParams = new URLSearchParams(window.location.search);
+  const speedParam = urlParams.get('animationSpeed');
+  if (speedParam) {
+    const speed = parseFloat(speedParam);
+    if (!isNaN(speed) && speed > 0) {
+      return speed;
+    }
+  }
+  return ANIMATION_SPEED_BROWSER; // Valor padrão do browser
+};
+
+const ANIMATION_SPEED = getAnimationSpeed(); // Multiplicador de velocidade da animação (pode ser sobrescrito via query string)
 const VELOCITY_DISPLAY_DELAY = 500; // Delay em milissegundos para mostrar a velocidade (0,5 segundo)
 const FIRE_DELAY = 500; // Delay em milissegundos antes de disparar (1 segundo)
 const FONT_SIZE = 18; // Tamanho da fonte do texto de velocidade em pixels
@@ -183,11 +201,11 @@ const NewtonCannon = (props: NewtonCannonProps) => {
       return;
     }
 
-    // Número total de frames (ajustar conforme necessário)
-    const TOTAL_SUN_FRAMES = 601; // Ajustar baseado nos frames disponíveis
-    // Reduzir FPS para deixar a rotação mais lenta (especialmente após dobrar frames)
-    const FPS = 15; // Frames por segundo
-    const FRAME_INTERVAL = 1000 / FPS; // Intervalo em milissegundos
+    // Número total de frames: 11303 frames (vídeo original tem ~3 minutos a 60fps)
+    const TOTAL_SUN_FRAMES = 11303; // Frames disponíveis do vídeo do Sol
+    // Reduzir FPS para rotação mais lenta e visível (30 FPS = metade da velocidade original)
+    const FPS = 30; // Frames por segundo (metade de 60 para rotação mais lenta)
+    const FRAME_INTERVAL = 1000 / FPS; // Intervalo em milissegundos (~33.33ms)
 
     // Iniciar animação
     sunFrameIntervalRef.current = setInterval(() => {

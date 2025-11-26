@@ -39,10 +39,40 @@ const http = require('http');
 
 const OUTPUT_DIR = path.join(__dirname, '../video-frames');
 const FPS = 60; // Frames por segundo
-const DURATION_SECONDS = 50; // Duração do vídeo em segundos
-const TOTAL_FRAMES = FPS * DURATION_SECONDS;
+// Duração padrão do vídeo em segundos (pode ser sobrescrita via argumento --duration)
+// 11303 frames / 60 fps = ~188 segundos (3 minutos)
+const DEFAULT_DURATION_SECONDS = 188;
+// Velocidade de animação padrão para geração de vídeo (pode ser sobrescrita via argumento --animation-speed)
+const ANIMATION_SPEED_VIDEO_DEFAULT = 100;
 const APP_URL = 'http://localhost:3000'; // URL da aplicação React
 const RESOLUTION = '1920x1080'; // Resolução do vídeo (1080p)
+
+// Parsear argumentos de linha de comando
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const result = {
+    duration: DEFAULT_DURATION_SECONDS,
+    animationSpeed: ANIMATION_SPEED_VIDEO_DEFAULT // Usar default se não for especificado
+  };
+  
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === '--duration' || args[i] === '-t') && args[i + 1]) {
+      const duration = parseFloat(args[i + 1]);
+      if (!isNaN(duration) && duration > 0) {
+        result.duration = duration;
+      }
+    } else if ((args[i] === '--animation-speed' || args[i] === '-a') && args[i + 1]) {
+      const speed = parseFloat(args[i + 1]);
+      if (!isNaN(speed) && speed > 0) {
+        result.animationSpeed = speed;
+      }
+    }
+  }
+  return result;
+}
+
+const { duration: DURATION_SECONDS, animationSpeed: ANIMATION_SPEED_PARAM } = parseArgs();
+const TOTAL_FRAMES = FPS * DURATION_SECONDS;
 
 // Formato do vídeo de saída. Valores válidos: 'mp4', 'mov', 'avi', 'mkv', 'webm'
 // IMPORTANTE: Para preservar transparência, use 'mov' e ajuste o codec para ProRes 4444
@@ -132,6 +162,7 @@ async function checkServerRunning(url) {
 
 async function generateVideo() {
   console.log('🚀 Iniciando geração de vídeo...');
+  console.log(`⏱️  Duração configurada: ${DURATION_SECONDS} segundos (${TOTAL_FRAMES} frames a ${FPS} FPS)`);
   
   // Verificar se o servidor está rodando (mas não bloquear se falhar)
   console.log(`🔍 Verificando se o servidor está rodando em ${APP_URL}...`);
@@ -179,9 +210,15 @@ async function generateVideo() {
       deviceScaleFactor: 1
     });
 
-    console.log(`📡 Carregando página: ${APP_URL}`);
+    // Adicionar parâmetro de animation speed na URL (sempre usar, mesmo que seja o default)
+    const urlObj = new URL(APP_URL);
+    urlObj.searchParams.set('animationSpeed', ANIMATION_SPEED_PARAM.toString());
+    const appUrl = urlObj.toString();
+    console.log(`⚡ Velocidade de animação configurada: ${ANIMATION_SPEED_PARAM}`);
+    
+    console.log(`📡 Carregando página: ${appUrl}`);
     try {
-      await page.goto(APP_URL, {
+      await page.goto(appUrl, {
         waitUntil: 'domcontentloaded', // Menos restritivo que networkidle0
         timeout: 30000
       });
