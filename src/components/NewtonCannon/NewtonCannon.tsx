@@ -8,6 +8,23 @@ import './NewtonCannon.css';
 
 const CANNON_HEIGHT = 80;
 const HUMAN_HEIGHT = 40; // Altura do humano em pixels
+const CANNON_MOUTH_OFFSET_PX = 40; // Ajuste fino vertical da boca do canhão (pode ser ajustado para alinhar a órbita no Sol)
+
+/**
+ * PRESET ATUAL DE PARÂMETROS FÍSICOS E VISUAIS
+ *
+ * - Distância do canhão: 2.000 km acima da superfície da Terra (e posição equivalente em px usada também no Sol)
+ * - Velocidade orbital "didática" da Terra (tecla 7): 6,9 km/s
+ * - Velocidade orbital ajustada do Sol (tecla 7 no Sol): calculada para produzir órbita quase circular
+ *   no raio inicial real da bala (considerando geometria atual do canhão e escalas em px)
+ * - ANIMATION_SPEED_BROWSER: 1200 (velocidade da animação no browser; o vídeo usa outro parâmetro)
+ *
+ * Se quiser salvar um novo preset no futuro, basta:
+ * - Ajustar as constantes abaixo
+ * - Atualizar este comentário com os novos valores-alvo
+ */
+
+// Diâmetro físico da Terra em pixels (usado para física/escala)
 const EARTH_DIAMETER = 600;
 const EARTH_RADIUS_KM = 6371; // Raio da Terra em km
 const EARTH_RADIUS_PX = EARTH_DIAMETER / 2;
@@ -41,11 +58,22 @@ const SUN_GRAVITY_KM_S2 = SUN_GRAVITY_M_S2 / 1000; // Gravidade na superfície d
 const SUN_GRAVITY_G = SUN_GRAVITY_M_S2 / GRAVITY_M_S2; // Gravidade do Sol em G (múltiplos da gravidade terrestre)
 // Velocidades orbitais
 const EARTH_RADIUS_M = EARTH_RADIUS_KM * 1000; // Raio da Terra em metros
-const EARTH_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_EARTH) / EARTH_RADIUS_M) / 1000; // Velocidade orbital da Terra em km/s (~7.9 km/s)
-const SUN_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_SUN) / SUN_RADIUS_M) / 1000; // Velocidade orbital do Sol em km/s (~437 km/s)
-// Velocidades orbitais ajustadas para reduzir acentuação da parábola (92% da velocidade orbital)
-const EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S = EARTH_ORBITAL_VELOCITY_KM_S * 0.92;
-const SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S = SUN_ORBITAL_VELOCITY_KM_S * 0.92;
+const EARTH_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_EARTH) / EARTH_RADIUS_M) / 1000; // Velocidade orbital física da Terra em km/s (~7,9 km/s)
+const SUN_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_SUN) / SUN_RADIUS_M) / 1000; // Velocidade orbital física do Sol em km/s (~437 km/s)
+
+// Velocidades orbitais ajustadas
+// Terra: valor "didático" de 6,9 km/s
+const EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S = 6.9;
+// Sol: raio de referência em km (1.000 km acima da superfície)
+const SUN_ORBITAL_RADIUS_KM_FOR_KEY7 = SUN_RADIUS_KM + 1000;
+// Como na física estamos trazendo a órbita 50px mais para dentro, o raio físico efetivo é um pouco menor:
+// r_eff_km = r_ref_km - (50 px / escala_px_por_km_do_Sol)
+const SUN_ORBITAL_RADIUS_KM_FOR_KEY7_EFFECTIVE =
+  SUN_ORBITAL_RADIUS_KM_FOR_KEY7 - (50 / SUN_SCALE_KM_TO_PX);
+// Velocidade orbital ajustada da tecla 7 (usar raio efetivo para órbita circular)
+const SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S = Math.sqrt(
+  SUN_GRAVITY_KM_S2 * (SUN_RADIUS_KM * SUN_RADIUS_KM) / SUN_ORBITAL_RADIUS_KM_FOR_KEY7_EFFECTIVE
+);
 const ANIMATION_SPEED_BROWSER = 1200; // Multiplicador de velocidade da animação no browser (padrão)
 
 // Ler ANIMATION_SPEED da query string se disponível, senão usar padrão do browser
@@ -73,6 +101,11 @@ const ARROW_TOP_V_POSITION = 1; // Ajuste vertical da seta de cima (em pixels)
 const ARROW_BOTTOM_V_POSITION = -9; // Ajuste vertical da seta de baixo (em pixels)
 const ROCK_PLANET_DIMENSION = 101; // Tamanho do planeta rochoso em percentagem (100% = mesmo tamanho da Terra)
 const SIZE_CHANGE_SPEED = 1; // Velocidade da mudança de tamanho do planeta em segundos (apenas para tecla "-")
+// Ângulo de lançamento (em graus) para a tecla 7 no Sol (gira o ponto de lançamento na órbita)
+const SOL_LAUNCH_ANGLE_DEG = 150;
+// Ângulo de rotação VISUAL das órbitas em torno do centro (em graus).
+// Ajuste esta variável para girar o desenho da órbita sem mudar a física.
+const ORBIT_ROTATION_DEG = 128;
 
 // Velocidades de disparo por tecla para a Terra (em km/s)
 // Ajustadas para que a tecla '7' seja a velocidade orbital (ajustada para reduzir acentuação)
@@ -84,11 +117,15 @@ const EARTH_VELOCITY_BY_KEY: { [key: string]: number } = {
   "5": 5,  
   "6": 6,  
   "7": EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S,    // Velocidade orbital ajustada da Terra
+  // Tecla 8: valor ajustado para que, no Sol, dê ~520 km/s (mais elíptica que a 7, mas sem escapar demais)
+  "8": (520 * EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S) / SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S,
   "9": 9.76,  // Velocidade de escape da Terra
 };
 
 // Velocidade de escape do Sol (sqrt(2) * velocidade orbital)
 const SUN_ESCAPE_VELOCITY_KM_S = Math.sqrt(2) * SUN_ORBITAL_VELOCITY_KM_S;
+// Velocidade da tecla 9 no Sol (valor ajustado para ~700 km/s)
+const SUN_KEY9_VELOCITY_KM_S = 700;
 
 // Função que retorna as velocidades baseadas no objeto visível
 const getVelocityByKey = (isSun: boolean): { [key: string]: number } => {
@@ -106,8 +143,9 @@ const getVelocityByKey = (isSun: boolean): { [key: string]: number } => {
     "4": EARTH_VELOCITY_BY_KEY["4"] * ratio,
     "5": EARTH_VELOCITY_BY_KEY["5"] * ratio,
     "6": EARTH_VELOCITY_BY_KEY["6"] * ratio,
+    "8": EARTH_VELOCITY_BY_KEY["8"] * ratio,
     "7": SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S,  // Velocidade orbital ajustada do Sol
-    "9": SUN_ESCAPE_VELOCITY_KM_S,  // Velocidade de escape do Sol
+    "9": SUN_KEY9_VELOCITY_KM_S,  // Velocidade ajustada da tecla 9 no Sol (~680 km/s)
   };
 };
 
@@ -158,11 +196,15 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const fireTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const planetSizeRef = useRef<number>(100);
 
-  // Posição inicial da boca do canhão (centro do objeto + raio + distância)
-  // Usar sempre o raio da Terra para manter o canhão na mesma posição visual
-  // A física das balas usará a escala correta baseada no objeto visível
+  // Posição base da boca do canhão (centro + raio da Terra + distância em km)
+  // Mantém a física igual para Terra. Para o Sol, apenas compensamos o fato de o Sol
+  // ter sido desenhado 20% menor, para que a distância VISUAL até a superfície continue
+  // parecendo 2.000 km, sem alterar a física.
   const cannonMouthDistancePx = CANNON_DISTANCE_KM * SCALE_KM_TO_PX;
-  const initialY = -(EARTH_RADIUS_PX + cannonMouthDistancePx);
+  const baseInitialY = -(EARTH_RADIUS_PX + cannonMouthDistancePx);
+  const initialY = showSun
+    ? baseInitialY + (SUN_RADIUS_PX * 0.2) + CANNON_MOUTH_OFFSET_PX
+    : baseInitialY;
 
   // Obter largura do canhão após renderizar
   useLayoutEffect(() => {
@@ -225,29 +267,55 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     };
   }, [showSun]);
 
-  const handleFire = useCallback((velocity: number) => {
+  const handleFire = useCallback((velocity: number, key?: string) => {
     // Usar a ref para garantir que temos o valor mais atualizado
     const currentCannonWidth = cannonRef.current?.offsetWidth || cannonWidthRef.current || cannonWidth;
     const bulletInitialX = currentCannonWidth / 2;
-    
-    // Converter velocidade de km/s para px/s
-    // Usar a escala correta baseada no objeto visível (Sol ou Terra)
-    const currentScaleKmToPx = showSun ? SUN_SCALE_KM_TO_PX : SCALE_KM_TO_PX;
-    const initialVelocityPxS = velocity * currentScaleKmToPx;
-    
-    // Debug: descomente para verificar a velocidade
-    // console.log(`Disparo: ${velocity} km/s = ${initialVelocityPxS} px/s`);
+
+    let x0 = bulletInitialX;
+    let y0 = initialY;
+    let vx0: number;
+    let vy0: number;
+
+    // Caso especial: Sol + tecla 7 → lançar em um ponto girado na órbita com velocidade tangencial,
+    // usando o raio definido para a órbita circular (SUN_ORBITAL_RADIUS_KM_FOR_KEY7)
+    if (showSun && key === '7') {
+      const theta = (SOL_LAUNCH_ANGLE_DEG * Math.PI) / 180;
+
+      // Raio físico em km (raio da órbita circular escolhido para a tecla 7 no Sol)
+      const rKm = SUN_ORBITAL_RADIUS_KM_FOR_KEY7;
+      // Converter para pixels e trazer a órbita 50px mais para dentro (mais próxima da superfície)
+      const rPx = rKm * SUN_SCALE_KM_TO_PX - 50;
+
+      // Posição inicial da bala em relação ao centro
+      x0 = rPx * Math.cos(theta);
+      y0 = rPx * Math.sin(theta);
+
+      // Velocidade tangencial (perpendicular ao raio)
+      const vPxPerS = velocity * SUN_SCALE_KM_TO_PX;
+      vx0 = vPxPerS * (-Math.sin(theta));
+      vy0 = vPxPerS * (Math.cos(theta));
+    } else {
+      // Comportamento padrão (Terra, outras teclas, Sol em outras velocidades)
+      const currentScaleKmToPx = showSun ? SUN_SCALE_KM_TO_PX : SCALE_KM_TO_PX;
+      const initialVelocityPxS = velocity * currentScaleKmToPx;
+      x0 = bulletInitialX;
+      y0 = initialY;
+      vx0 = initialVelocityPxS;
+      vy0 = 0;
+    }
+
     const newBullet: BulletState = {
       id: bulletIdCounter.current++,
-      x: bulletInitialX,
-      y: initialY,
-      vx: initialVelocityPxS,
-      vy: 0,
+      x: x0,
+      y: y0,
+      vx: vx0,
+      vy: vy0,
       time: 0,
       isActive: true,
       startTime: performance.now(),
       initialVelocity: velocity,
-      initialX: bulletInitialX
+      initialX: x0
     };
     
     setBullets(prev => [...prev, newBullet]);
@@ -288,7 +356,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         
         // 3. Disparar após FIRE_DELAY (1 segundo)
         fireTimeoutRef.current = setTimeout(() => {
-          handleFire(velocity);
+          handleFire(velocity, key);
           fireTimeoutRef.current = null;
           // Não limpar selectedVelocity aqui - deixar visível mesmo após disparo
         }, FIRE_DELAY);
@@ -361,6 +429,43 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           fireTimeoutRef.current = null;
         }
       }
+      // Comandos específicos para ir direto para cada planeta
+      if (event.key === 'q' || event.key === 'Q') {
+        // Ir direto para Terra
+        setShowSun(false);
+        setUseRockPlanet(false);
+        setPlanetSize(100);
+        setBullets([]);
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+      }
+      if (event.key === 'w' || event.key === 'W') {
+        // Ir direto para planeta rochoso
+        setShowSun(false);
+        setUseRockPlanet(true);
+        setPlanetSize(ROCK_PLANET_DIMENSION);
+        setBullets([]);
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+      }
+      if (event.key === 'e' || event.key === 'E') {
+        // Ir direto para Sol
+        setShowSun(true);
+        setUseRockPlanet(false);
+        setPlanetSize(100);
+        setBullets([]);
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+      }
       if (event.key === '-' || event.key === '_') {
         // Diminuir planeta em 50% do tamanho atual (com animação suave)
         setTargetPlanetSize(prev => {
@@ -374,7 +479,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         // Voltar suavemente para 100% do tamanho original (com animação)
         setTargetPlanetSize(100);
       }
-      if (event.key === 'h' || event.key === 'H') {
+      if (event.key === 's' || event.key === 'S') {
         // Rotacionar humano 90° para a esquerda (ou voltar para 0°)
         setHumanRotation(prev => prev === 0 ? -90 : 0);
       }
@@ -391,7 +496,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           setTargetHumanY(-EARTH_RADIUS_PX);
         }
       }
-      if (event.key === 'j' || event.key === 'J') {
+      if (event.key === 'a' || event.key === 'A') {
         // Mostrar/ocultar humano
         setShowHuman(prev => !prev);
       }
@@ -568,7 +673,10 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             
             // Determinar raio e gravidade baseado no objeto visível
             const isSun = showSun;
-            const objectRadiusPx = isSun ? SUN_RADIUS_PX * (planetSize / 100) : EARTH_RADIUS_PX * (planetSize / 100);
+            // Para o Sol, o raio visual foi reduzido em 20% (0.8x), então usamos 0.8 * SUN_RADIUS_PX
+            const objectRadiusPx = isSun
+              ? SUN_RADIUS_PX * 0.8 * (planetSize / 100)
+              : EARTH_RADIUS_PX * (planetSize / 100);
             // Para o Sol, a bala para 32px mais dentro, então a física só aplica fora desse raio
             const physicsRadiusPx = isSun ? objectRadiusPx - 32 : objectRadiusPx;
             const objectRadiusKm = isSun ? SUN_RADIUS_KM : EARTH_RADIUS_KM;
@@ -624,7 +732,10 @@ const NewtonCannon = (props: NewtonCannonProps) => {
 
           // Verificar se a bala colidiu com o objeto (Terra ou Sol)
           const newDistanceFromCenter = Math.sqrt(newX * newX + newY * newY);
-          const currentObjectRadiusPx = showSun ? SUN_RADIUS_PX * (planetSize / 100) : EARTH_RADIUS_PX * (planetSize / 100);
+          // Raio visual atual do objeto (Terra ou Sol)
+          const currentObjectRadiusPx = showSun
+            ? SUN_RADIUS_PX * 0.8 * (planetSize / 100)
+            : EARTH_RADIUS_PX * (planetSize / 100);
           // Para o Sol, a bala para 32px mais dentro
           const collisionRadiusPx = showSun ? currentObjectRadiusPx - 32 : currentObjectRadiusPx;
           if (hasCollided || newDistanceFromCenter <= collisionRadiusPx) {
@@ -683,9 +794,12 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     };
   }, [bullets, cannonWidth, initialY, showSun, planetSize]);
 
-  // Função para formatar velocidade (substituir ponto por vírgula)
+  // Função para formatar velocidade em km/s com uma casa decimal
   const formatVelocity = (velocity: number): string => {
-    return Math.round(velocity).toString();
+    return velocity.toLocaleString('pt-BR', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
   };
 
   // Função para formatar número com vírgula decimal e ponto como separador de milhar
@@ -704,14 +818,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           <div className="instructions-title">Instruções:</div>
           <table className="instructions-table" style={{ fontSize: `${FONT_SIZE - 2}px` }}>
             <tbody>
-              <tr>
-                <td>Espaço</td>
-                <td>liga/desliga instruções</td>
-              </tr>
-              <tr>
-                <td>Esc</td>
-                <td>liga/desliga indicação altura</td>
-              </tr>
+              {/* Disparo (linha numérica) */}
               {Object.entries(getVelocityByKey(showSun)).sort(([a], [b]) => {
                 // Ordenar: números primeiro (1-9), depois 0
                 if (a === '0') return 1;
@@ -733,20 +840,56 @@ const NewtonCannon = (props: NewtonCannonProps) => {
               })}
               <tr>
                 <td>0</td>
-                <td>desliga mostrador de velocidade</td>
+                <td>desliga mostrador de velocidade (cancela disparo)</td>
+              </tr>
+              {/* Espaço entre grupos */}
+              <tr><td colSpan={2}>&nbsp;</td></tr>
+
+              {/* Controles gerais (teclas fora das linhas principais) */}
+              <tr>
+                <td>Espaço</td>
+                <td>liga/desliga instruções</td>
               </tr>
               <tr>
-                <td>x</td>
-                <td>liga/desliga canhão, texto e balas na superfície</td>
+                <td>Esc</td>
+                <td>liga/desliga indicação altura</td>
               </tr>
+              {/* Espaço entre grupos */}
+              <tr><td colSpan={2}>&nbsp;</td></tr>
+
+              {/* Linha QWERTY (Q W E R T Y U I O P) */}
+              <tr>
+                <td>q</td>
+                <td>muda diretamente para Terra</td>
+              </tr>
+              <tr>
+                <td>w</td>
+                <td>muda diretamente para planeta rochoso</td>
+              </tr>
+              <tr>
+                <td>e</td>
+                <td>muda diretamente para Sol</td>
+              </tr>
+              <tr>
+                <td>r</td>
+                <td>troca entre Terra, planeta rochoso e Sol</td>
+              </tr>
+              {/* Espaço entre grupos */}
+              <tr><td colSpan={2}>&nbsp;</td></tr>
+
+              {/* Linha ZXCV (Z X C V B N M) */}
               <tr>
                 <td>z</td>
                 <td>desliga tudo (exceto planeta, gravidade e círculo)</td>
               </tr>
               <tr>
-                <td>y</td>
-                <td>troca entre Terra, planeta rochoso e Sol</td>
+                <td>x</td>
+                <td>liga/desliga canhão, texto e balas na superfície</td>
               </tr>
+              {/* Espaço entre grupos */}
+              <tr><td colSpan={2}>&nbsp;</td></tr>
+
+              {/* Tamanho do planeta */}
               <tr>
                 <td>-</td>
                 <td>diminui tamanho do planeta (50%)</td>
@@ -755,12 +898,16 @@ const NewtonCannon = (props: NewtonCannonProps) => {
                 <td>+</td>
                 <td>volta tamanho do planeta para 100%</td>
               </tr>
+              {/* Espaço entre grupos */}
+              <tr><td colSpan={2}>&nbsp;</td></tr>
+
+              {/* Humano */}
               <tr>
-                <td>j</td>
+                <td>a</td>
                 <td>liga/desliga humano</td>
               </tr>
               <tr>
-                <td>h</td>
+                <td>s</td>
                 <td>rota o humano (em pé/deitado)</td>
               </tr>
               <tr>
@@ -883,8 +1030,9 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             left: '50%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
-            width: `${(EARTH_DIAMETER + 80) * (planetSize / 100)}px`,
-            height: `${(EARTH_DIAMETER + 80) * (planetSize / 100)}px`,
+            // Tamanho visual do Sol 20% menor (0.8x), sem alterar física
+            width: `${(EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100)}px`,
+            height: `${(EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100)}px`,
             objectFit: 'contain',
             pointerEvents: 'none',
             userSelect: 'none',
@@ -931,7 +1079,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
               ▼
             </div>
             {/* Texto "2.000 km" */}
-            <div
+              <div
               className="distance-indicator-text"
               style={{
                 top: `calc(50% + ${(initialY + (-EARTH_RADIUS_PX + 10)) / 2}px)`,
@@ -964,7 +1112,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           }}
         />
       )}
-      {bullets.map(bullet => {
+        {bullets.map(bullet => {
           // Verificar se a bala está dentro da área visível (com margem)
           const visibleArea = EARTH_DIAMETER * 2; // Área visível 2x o diâmetro da Terra
           const isVisible = Math.abs(bullet.x) < visibleArea && 
@@ -979,7 +1127,20 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           if (!isVisible && bullet.isActive) {
             return null;
           }
-          
+
+          // Aplicar rotação VISUAL da órbita em torno do centro APENAS para a tecla 7 no Sol.
+          // Identificamos a tecla 7 no Sol pelo valor de velocidade inicial em km/s
+          // igual a SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S.
+          let renderX = bullet.x;
+          let renderY = bullet.y;
+          if (showSun && bullet.initialVelocity === SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S) {
+            const angleRad = (ORBIT_ROTATION_DEG * Math.PI) / 180;
+            const cosA = Math.cos(angleRad);
+            const sinA = Math.sin(angleRad);
+            renderX = bullet.x * cosA - bullet.y * sinA;
+            renderY = bullet.x * sinA + bullet.y * cosA;
+          }
+
           // Usar posições com precisão decimal para movimento suave
           // O navegador moderno suporta sub-pixel rendering, então não precisamos arredondar
           // Isso elimina "soluços" causados por arredondamento
@@ -990,7 +1151,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
               alt="Bala"
               className="bullet"
               style={{
-                transform: `translate(calc(-50% + ${bullet.x}px), calc(-50% + ${bullet.y}px))`
+                transform: `translate(calc(-50% + ${renderX}px), calc(-50% + ${renderY}px))`
               }}
             />
           );

@@ -80,45 +80,102 @@ const VIDEO_FORMAT = 'mp4';
 
 const VIDEO_OUTPUT = path.join(__dirname, `../output.${VIDEO_FORMAT}`);
 
-// Script simplificado, passo a passo, para o vídeo
-const VIDEO_SCRIPT = [
-  {
-    wait: 0, // imediatamente, sem espera
-    key: 'z',
-  },
-  {
-    wait: 0.1, // em segundos
-    key: 'x',
-  },
-  {
-    wait: 0.5,
-    key: '7',
-  },
-  {
-    wait: 15,
-    key: 'y',
-  },
-  {
-    wait: 6,
-    key: '-',
-  },
-  {
-    wait: 10,
-    key: '-',
-  },
-  {
-    wait: 5,
-    key: '-',
-  },
-  {
-    wait: 5,
-    key: '-',
-  },
-  {
-    wait: 5,
-    key: '-', // estrela neutrons
-  },
-];
+// Importar script do vídeo de arquivo separado
+// O arquivo movie-script.ts é compilado para movie-script.js antes de ser usado
+// Se o arquivo .js não existir, tentar compilar o .ts automaticamente
+let VIDEO_SCRIPT_RAW;
+try {
+  // Tentar carregar JavaScript compilado primeiro (mais rápido)
+  VIDEO_SCRIPT_RAW = require('./movie-script.js');
+} catch (e) {
+  // Se não existir, tentar compilar TypeScript
+  try {
+    const { execSync } = require('child_process');
+    console.log('📝 Compilando movie-script.ts para JavaScript...');
+    execSync('npx tsc scripts/movie-script.ts --outDir scripts --module commonjs --target es2020 --esModuleInterop --skipLibCheck', { stdio: 'inherit' });
+    VIDEO_SCRIPT_RAW = require('./movie-script.js');
+  } catch (compileError) {
+    console.error('❌ Erro: Não foi possível compilar ou carregar movie-script.ts');
+    console.error('   Certifique-se de que o TypeScript está instalado: npm install --save-dev typescript');
+    throw compileError;
+  }
+}
+
+// Se o script foi exportado como default, usar isso; senão tentar named export ou usar diretamente
+const VIDEO_SCRIPT = VIDEO_SCRIPT_RAW.default || VIDEO_SCRIPT_RAW.VIDEO_SCRIPT || VIDEO_SCRIPT_RAW;
+
+// Validar que VIDEO_SCRIPT tem a estrutura esperada
+if (!Array.isArray(VIDEO_SCRIPT)) {
+  throw new Error('VIDEO_SCRIPT deve ser um array de objetos com { wait, cmd }');
+}
+
+// Validar estrutura de cada ação
+for (let i = 0; i < VIDEO_SCRIPT.length; i++) {
+  const action = VIDEO_SCRIPT[i];
+  if (typeof action.wait !== 'number' || typeof action.cmd !== 'string') {
+    throw new Error(`Ação ${i} no VIDEO_SCRIPT deve ter { wait: number, cmd: string }, mas recebeu: ${JSON.stringify(action)}`);
+  }
+}
+
+// Mapeamento de comandos legíveis para teclas
+const CMD_TO_KEY = {
+  // Controle geral
+  'hide all': 'z',
+  'toggle cannon': 'x',
+  // Linha QWERTY: q w e r
+  'earth': 'q',
+  'rock': 'w',
+  'sun': 'e',
+  'switch planet': 'r',
+  'toggle distance': 'Escape',
+  'hide instructions': ' ',
+  'show instructions': ' ',
+  
+  // Disparo
+  'fire 1': '1',
+  'fire 2': '2',
+  'fire 3': '3',
+  'fire 4': '4',
+  'fire 5': '5',
+  'fire 6': '6',
+  'fire escape': '9',
+  'fire orbital': '7',
+  'cancel fire': '0',
+  
+  // Tamanho do planeta
+  'shrink planet': '-',
+  'grow planet': '+',
+  
+  // Humano
+  'hide human': 'a',
+  'show human': 'a',
+  'kill human': 's',
+  'move human down': 'ArrowDown',
+};
+
+/**
+ * Converte um comando legível para a tecla correspondente
+ * @param {string} cmd - Comando legível
+ * @returns {string} - Tecla correspondente
+ */
+function cmdToKey(cmd) {
+  const normalizedCmd = cmd.toLowerCase().trim();
+  const key = CMD_TO_KEY[normalizedCmd];
+  
+  if (!key) {
+    console.warn(`⚠️  Comando desconhecido: "${cmd}". Usando como tecla direta.`);
+    return cmd; // Fallback: usar o comando como tecla (caso seja uma tecla direta)
+  }
+  
+  return key;
+}
+
+// Converter comandos do script para teclas
+const VIDEO_SCRIPT_WITH_KEYS = VIDEO_SCRIPT.map(action => ({
+  wait: action.wait,
+  key: cmdToKey(action.cmd),
+  cmd: action.cmd, // Manter o comando original para logs
+}));
 
 // Helper function para substituir page.waitForTimeout (removido nas versões recentes do Puppeteer)
 function wait(ms) {
@@ -255,17 +312,18 @@ async function generateVideo() {
     // Preparar script: calcular tempos absolutos em milissegundos
     const scriptActions = [];
     let accumulatedTime = 0;
-    for (const action of VIDEO_SCRIPT) {
+    for (const action of VIDEO_SCRIPT_WITH_KEYS) {
       accumulatedTime += action.wait * 1000; // Converter segundos para ms
       scriptActions.push({
         time: accumulatedTime,
         key: action.key,
+        cmd: action.cmd, // Manter comando para logs
       });
     }
     
     console.log(`📋 Script configurado com ${scriptActions.length} ações:`);
     scriptActions.forEach((action, index) => {
-      console.log(`   ${(action.time / 1000).toFixed(1)}s: Pressionar tecla '${action.key}'`);
+      console.log(`   ${(action.time / 1000).toFixed(1)}s: ${action.cmd || action.key} (tecla '${action.key}')`);
     });
     
     const frameInterval = 1000 / FPS; // Intervalo entre frames em ms

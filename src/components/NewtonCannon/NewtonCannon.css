@@ -54,6 +54,7 @@
   transform: translate(-50%, -50%);
   width: auto;
   /* height e top serão definidos inline pois dependem de CANNON_HEIGHT e initialY */
+  z-index: 5; /* garantir que o canhão fique à frente do Sol */
 }
 
 .velocity-display {
