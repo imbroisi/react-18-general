@@ -450,15 +450,15 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     };
   }, [handleFire]);
 
-  // Listener para tecla "Esc" esconder/mostrar indicação de distância, "Espaço" para instruções,
+  // Listener para tecla "Espaço" esconder/mostrar indicação de distância, "Esc" para instruções,
   // "g" para ligar/desligar texto de gravidade, "x" para limpar, "t/y" para satélites
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowDistanceIndicator(prev => !prev);
-      }
       if (event.key === ' ') {
         event.preventDefault(); // Prevenir scroll da página
+        setShowDistanceIndicator(prev => !prev);
+      }
+      if (event.key === 'Escape') {
         setShowInstructions(prev => !prev);
       }
       if (event.key === 'g' || event.key === 'G') {
@@ -948,11 +948,11 @@ const NewtonCannon = (props: NewtonCannonProps) => {
 
               {/* Controles gerais (teclas fora das linhas principais) */}
               <tr>
-                <td>Espaço</td>
+                <td>Esc</td>
                 <td>liga/desliga instruções</td>
               </tr>
               <tr>
-                <td>Esc</td>
+                <td>Espaço</td>
                 <td>liga/desliga indicação altura</td>
               </tr>
               <tr>
@@ -1247,8 +1247,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           const topX = ellipseCenterX;
           const topY = -b - 25 + 100; // 25px acima da elipse + 100px para baixo
 
-          // Destaque próximo aos extremos: janela de 1 segundo em torno do periélio/afélio
-          const HIGHLIGHT_WINDOW_SECONDS = 0.5;
+          // Destaque próximo aos extremos: janela curta em torno do periélio/afélio
+          const HIGHLIGHT_WINDOW_SECONDS = 0.25;
           const halfWindowAngle = (ELLIPTICAL_ORBIT_ANGULAR_SPEED * HIGHLIGHT_WINDOW_SECONDS) / 2;
 
           const TWO_PI = Math.PI * 2;
