@@ -159,6 +159,76 @@
   /* transform será definido inline pois depende de roundedX e roundedY calculados em runtime */
 }
 
+.satellite-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20px;  /* mais 50% em relação aos 15px anteriores (~2x a bala base) */
+  height: 20px;
+  border-radius: 50%;
+  /* Terra vista do espaço: azul com leves "nuvens" brancas */
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8) 0, rgba(255,255,255,0) 40%),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.6) 0, rgba(255,255,255,0) 45%),
+    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.5) 0, rgba(255,255,255,0) 35%),
+    #2e8bff;
+  box-shadow: 0 0 8px rgba(46, 139, 255, 0.9);
+  pointer-events: none;
+  user-select: none;
+  z-index: 9; /* acima do Sol, abaixo das balas */
+}
+
+.ellipse-velocity-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  color: #ffffff;
+  font-size: 12px;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  user-select: none;
+  text-align: center;
+  line-height: 1.6;
+  z-index: 9;
+}
+
+.ellipse-velocity-value {
+  font-size: 16px;
+}
+
+.ellipse-orbit-outline {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: none;
+  user-select: none;
+  z-index: 8;
+}
+
+.ellipse-info-text {
+  position: absolute;
+  left: 36px;
+  top: 36px;
+  max-width: 400px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 16px;
+  line-height: 1.5;
+  pointer-events: none;
+  user-select: none;
+  z-index: 10;
+}
+
+.ellipse-info-text p {
+  margin: 0 0 20px 0;
+}
+
+.ellipse-info-text p:last-child {
+  margin-bottom: 0;
+}
+
 .sun {
   position: relative;
   animation: sunCorona 30s ease-in-out infinite;

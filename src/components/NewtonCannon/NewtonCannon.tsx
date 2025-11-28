@@ -56,6 +56,16 @@ const SUN_SCALE_KM_TO_PX = SUN_RADIUS_PX / SUN_RADIUS_KM; // Escala km para pixe
 const SUN_GRAVITY_M_S2 = (G * M_SUN) / (SUN_RADIUS_M * SUN_RADIUS_M); // Gravidade na superfície do Sol em m/s²
 const SUN_GRAVITY_KM_S2 = SUN_GRAVITY_M_S2 / 1000; // Gravidade na superfície do Sol em km/s²
 const SUN_GRAVITY_G = SUN_GRAVITY_M_S2 / GRAVITY_M_S2; // Gravidade do Sol em G (múltiplos da gravidade terrestre)
+// Parâmetro gravitacional do Sol em km^3/s^2 (μ = G * M_sun, convertido para km)
+const MU_SUN_KM3_S2 = SUN_GRAVITY_KM_S2 * SUN_RADIUS_KM * SUN_RADIUS_KM;
+
+// Órbita real da Terra ao redor do Sol (valores astronômicos aproximados)
+const EARTH_PERIHELION_KM = 147.095e6;  // km no periélio
+const EARTH_APHELION_KM = 152.100e6;    // km no afélio
+const EARTH_ORBIT_SEMIMAJOR_AXIS_KM = (EARTH_PERIHELION_KM + EARTH_APHELION_KM) / 2;
+
+// Velocidade angular usada para animar a órbita elíptica (rad/s)
+const ELLIPTICAL_ORBIT_ANGULAR_SPEED = 0.5;
 // Velocidades orbitais
 const EARTH_RADIUS_M = EARTH_RADIUS_KM * 1000; // Raio da Terra em metros
 const EARTH_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_EARTH) / EARTH_RADIUS_M) / 1000; // Velocidade orbital física da Terra em km/s (~7,9 km/s)
@@ -171,6 +181,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const [cannonWidth, setCannonWidth] = useState<number>(0);
   const [selectedVelocity, setSelectedVelocity] = useState<number | null>(null);
   const [showDistanceIndicator, setShowDistanceIndicator] = useState<boolean>(true);
+  const [showGravity, setShowGravity] = useState<boolean>(true); // Visibilidade do texto de gravidade
   const [showInstructions, setShowInstructions] = useState<boolean>(true);
   const [showCannon, setShowCannon] = useState<boolean>(true);
   const [useRockPlanet, setUseRockPlanet] = useState<boolean>(false);
@@ -183,6 +194,12 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const [targetHumanY, setTargetHumanY] = useState<number>(-EARTH_RADIUS_PX); // Posição Y alvo do humano para animação (topo = negativo)
   const [showHuman, setShowHuman] = useState<boolean>(true); // Visibilidade do humano
   const [sunFrameIndex, setSunFrameIndex] = useState<number>(1); // Índice do frame atual do Sol
+  const [showSatellite, setShowSatellite] = useState<boolean>(false); // Mostrar/esconder satélite de teste (tecla 't')
+  const [satelliteAngle, setSatelliteAngle] = useState<number>(0); // Ângulo do satélite em radianos
+  const [showEllipticalOrbit, setShowEllipticalOrbit] = useState<boolean>(false); // Mostrar/esconder órbita elíptica (tecla 'y')
+  const [ellipticalOrbitAngle, setEllipticalOrbitAngle] = useState<number>(0); // Ângulo da órbita elíptica em radianos
+  const [showEllipseVelocities, setShowEllipseVelocities] = useState<boolean>(false); // Mostrar/esconder velocidades na órbita elíptica (tecla 'u')
+  const [showEllipseOutline, setShowEllipseOutline] = useState<boolean>(false); // Mostrar/esconder linha tracejada da elipse (controlada junto com 'u')
   const humanYRef = useRef<number>(0);
   const previousPlanetSizeRef = useRef<number>(planetSize);
   const sunFrameIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -190,6 +207,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const showSunRef = useRef<boolean>(showSun);
   const useRockPlanetRef = useRef<boolean>(useRockPlanet);
   const animationFrameRef = useRef<number | null>(null);
+  const satelliteAnimationRef = useRef<number | null>(null);
+  const ellipticalOrbitAnimationRef = useRef<number | null>(null);
   const bulletIdCounter = useRef<number>(0);
   const cannonRef = useRef<HTMLImageElement | null>(null);
   const isAnimatingRef = useRef<boolean>(false);
@@ -266,6 +285,65 @@ const NewtonCannon = (props: NewtonCannonProps) => {
       }
     };
   }, [showSun]);
+
+  // Animação do satélite de teste (órbita circular puramente geométrica ao redor do Sol)
+  useEffect(() => {
+    if (!showSun || !showSatellite) {
+      if (satelliteAnimationRef.current) {
+        cancelAnimationFrame(satelliteAnimationRef.current);
+        satelliteAnimationRef.current = null;
+      }
+      return;
+    }
+
+    let lastTime = performance.now();
+    const angularSpeed = 0.5; // radianos por segundo (ajuste se quiser mais rápido/lento)
+
+    const animate = (time: number) => {
+      const dt = (time - lastTime) / 1000;
+      lastTime = time;
+      setSatelliteAngle(prev => (prev + angularSpeed * dt) % (Math.PI * 2));
+      satelliteAnimationRef.current = requestAnimationFrame(animate);
+    };
+
+    satelliteAnimationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (satelliteAnimationRef.current) {
+        cancelAnimationFrame(satelliteAnimationRef.current);
+        satelliteAnimationRef.current = null;
+      }
+    };
+  }, [showSun, showSatellite]);
+
+  // Animação da órbita elíptica (órbita elíptica puramente geométrica ao redor do Sol)
+  useEffect(() => {
+    if (!showSun || !showEllipticalOrbit) {
+      if (ellipticalOrbitAnimationRef.current) {
+        cancelAnimationFrame(ellipticalOrbitAnimationRef.current);
+        ellipticalOrbitAnimationRef.current = null;
+      }
+      return;
+    }
+
+    let lastTime = performance.now();
+
+    const animate = (time: number) => {
+      const dt = (time - lastTime) / 1000;
+      lastTime = time;
+      setEllipticalOrbitAngle(prev => (prev + ELLIPTICAL_ORBIT_ANGULAR_SPEED * dt) % (Math.PI * 2));
+      ellipticalOrbitAnimationRef.current = requestAnimationFrame(animate);
+    };
+
+    ellipticalOrbitAnimationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (ellipticalOrbitAnimationRef.current) {
+        cancelAnimationFrame(ellipticalOrbitAnimationRef.current);
+        ellipticalOrbitAnimationRef.current = null;
+      }
+    };
+  }, [showSun, showEllipticalOrbit]);
 
   const handleFire = useCallback((velocity: number, key?: string) => {
     // Usar a ref para garantir que temos o valor mais atualizado
@@ -372,7 +450,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     };
   }, [handleFire]);
 
-  // Listener para tecla "Esc" esconder/mostrar indicação de distância, "Espaço" para instruções, "x" para limpar e "y" para trocar planeta
+  // Listener para tecla "Esc" esconder/mostrar indicação de distância, "Espaço" para instruções,
+  // "g" para ligar/desligar texto de gravidade, "x" para limpar, "t/y" para satélites
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -381,6 +460,10 @@ const NewtonCannon = (props: NewtonCannonProps) => {
       if (event.key === ' ') {
         event.preventDefault(); // Prevenir scroll da página
         setShowInstructions(prev => !prev);
+      }
+      if (event.key === 'g' || event.key === 'G') {
+        // Mostrar/esconder texto de gravidade
+        setShowGravity(prev => !prev);
       }
       if (event.key === 'x' || event.key === 'X') {
         // Toggle: apagar/mostrar canhão, texto de velocidade e balas na superfície
@@ -395,39 +478,33 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           setShowCannon(true);
         }
       }
+      if (event.key === 't' || event.key === 'T') {
+        // Mostrar/esconder satélite de teste em órbita circular ao redor do Sol
+        setShowSatellite(prev => !prev);
+      }
       if (event.key === 'y' || event.key === 'Y') {
-        // Trocar entre Terra, planeta rochoso e Sol
-        // Ciclo: Sol -> Terra -> Planeta Rochoso -> Sol
-        // Usar refs para garantir que lemos o estado mais atualizado
-        const currentShowSun = showSunRef.current;
-        const currentUseRockPlanet = useRockPlanetRef.current;
-        
-        if (currentShowSun) {
-          // Se está mostrando Sol, mudar para Terra
-          setShowSun(false);
-          setUseRockPlanet(false);
-          setPlanetSize(100);
-        } else if (currentUseRockPlanet) {
-          // Se está mostrando planeta rochoso, mudar para Sol
-          setShowSun(true);
-          setUseRockPlanet(false);
-          setPlanetSize(100);
-        } else {
-          // Se está mostrando Terra, mudar para planeta rochoso
-          setShowSun(false);
-          setUseRockPlanet(true);
-          setPlanetSize(ROCK_PLANET_DIMENSION);
-        }
-
-        // Sempre limpar todas as balas ao trocar entre Terra / planeta rochoso / Sol
-        setBullets([]);
-
-        // Desligar o indicador de velocidade e cancelar disparo agendado, se houver
-        setSelectedVelocity(null);
-        if (fireTimeoutRef.current) {
-          clearTimeout(fireTimeoutRef.current);
-          fireTimeoutRef.current = null;
-        }
+        // Mostrar/esconder órbita elíptica ao redor do Sol
+        // Ao ligar a órbita elíptica:
+        // - manter textos de velocidade da elipse desligados por padrão
+        // - desligar o texto de gravidade para focar apenas na órbita
+        // - desligar o canhão
+        setShowEllipticalOrbit(prev => {
+          const next = !prev;
+          if (!prev && next) {
+            setShowEllipseVelocities(false);
+            setShowGravity(false);
+            setShowCannon(false);
+          }
+          return next;
+        });
+      }
+      if (event.key === 'u' || event.key === 'U') {
+        // Mostrar/esconder velocidades e linha tracejada da órbita elíptica
+        setShowEllipseVelocities(prev => {
+          const next = !prev;
+          setShowEllipseOutline(next);
+          return next;
+        });
       }
       // Comandos específicos para ir direto para cada planeta
       if (event.key === 'q' || event.key === 'Q') {
@@ -501,20 +578,35 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         setShowHuman(prev => !prev);
       }
       if (event.key === 'z' || event.key === 'Z') {
-        // Desligar tudo, exceto planeta/Sol, indicador de gravidade e círculo tracejado
-        setShowCannon(false);
-        setShowDistanceIndicator(false);
-        setShowInstructions(false);
-        setShowHuman(false);
-        setSelectedVelocity(null);
-        // Remover todas as balas (incluindo as que estão orbitando)
-        setBullets([]);
-        // Cancelar animação de balas
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-          animationFrameRef.current = null;
+        // Toggle: desligar/ligar tudo, exceto planeta/Sol, indicador de gravidade e círculo tracejado
+        const allOff =
+          !showCannon &&
+          !showDistanceIndicator &&
+          !showInstructions &&
+          !showHuman;
+
+        if (allOff) {
+          // Reativar elementos principais
+          setShowCannon(true);
+          setShowDistanceIndicator(true);
+          setShowInstructions(true);
+          setShowHuman(true);
+        } else {
+          // Desligar tudo
+          setShowCannon(false);
+          setShowDistanceIndicator(false);
+          setShowInstructions(false);
+          setShowHuman(false);
+          setSelectedVelocity(null);
+          // Remover todas as balas (incluindo as que estão orbitando)
+          setBullets([]);
+          // Cancelar animação de balas
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+          }
+          isAnimatingRef.current = false;
         }
-        isAnimatingRef.current = false;
       }
     };
 
@@ -522,7 +614,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [showCannon, humanPosition, planetSize]);
+  }, [showCannon, humanPosition, planetSize, showDistanceIndicator, showInstructions, showHuman]);
 
   // Inicializar posição Y do humano na linha tracejada (superfície a 100%)
   useEffect(() => {
@@ -810,6 +902,15 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     });
   };
 
+  // Função para formatar data no formato "dia de mês"
+  const formatDate = (day: number, month: number): string => {
+    const monthNames = [
+      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+    ];
+    return `${day} de ${monthNames[month - 1]}`;
+  };
+
   return (
     <div className="container">
       {/* Tabela de instruções na extrema esquerda */}
@@ -854,6 +955,10 @@ const NewtonCannon = (props: NewtonCannonProps) => {
                 <td>Esc</td>
                 <td>liga/desliga indicação altura</td>
               </tr>
+              <tr>
+                <td>g</td>
+                <td>liga/desliga texto de gravidade</td>
+              </tr>
               {/* Espaço entre grupos */}
               <tr><td colSpan={2}>&nbsp;</td></tr>
 
@@ -874,13 +979,25 @@ const NewtonCannon = (props: NewtonCannonProps) => {
                 <td>r</td>
                 <td>troca entre Terra, planeta rochoso e Sol</td>
               </tr>
+              <tr>
+                <td>t</td>
+                <td>liga/desliga satélite em órbita circular ao redor do Sol</td>
+              </tr>
+              <tr>
+                <td>y</td>
+                <td>liga/desliga satélite em órbita elíptica ao redor do Sol</td>
+              </tr>
+              <tr>
+                <td>u</td>
+                <td>liga/desliga velocidades e linha tracejada na órbita elíptica</td>
+              </tr>
               {/* Espaço entre grupos */}
               <tr><td colSpan={2}>&nbsp;</td></tr>
 
               {/* Linha ZXCV (Z X C V B N M) */}
               <tr>
                 <td>z</td>
-                <td>desliga tudo (exceto planeta, gravidade e círculo)</td>
+                <td>liga/desliga tudo (exceto planeta, gravidade e círculo)</td>
               </tr>
               <tr>
                 <td>x</td>
@@ -927,8 +1044,11 @@ const NewtonCannon = (props: NewtonCannonProps) => {
               left: '50%',
               top: '50%',
               transform: 'translate(-50%, -50%)',
-              width: `${EARTH_DIAMETER}px`,
-              height: `${EARTH_DIAMETER}px`,
+              // Circunferência de referência 50px menor que o diâmetro base:
+              // - Para a Terra: EARTH_DIAMETER - 50
+              // - Para o Sol: diâmetro visual em 100% (com fator 0.8) - 50
+              width: `${(showSun ? (EARTH_DIAMETER + 80) * 0.8 : EARTH_DIAMETER) - 50}px`,
+              height: `${(showSun ? (EARTH_DIAMETER + 80) * 0.8 : EARTH_DIAMETER) - 50}px`,
               zIndex: 5
             }}
           />
@@ -957,30 +1077,32 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         </>
       )}
       {/* Indicador de gravidade na superfície atual do planeta/Sol */}
-      <div
-        className="planet-gravity-indicator"
-        style={{
-          position: 'absolute',
-          left: `calc(50% - ${(showSun ? SUN_RADIUS_PX * (planetSize / 100) : EARTH_RADIUS_PX * (planetSize / 100)) + 30}px)`,
-          top: '50%',
-          transform: 'translate(-100%, -50%)',
-          fontSize: `${FONT_SIZE - 2}px`,
-          textAlign: 'center',
-          zIndex: 10
-        }}
-      >
-      {planetSize < 3.1 ? (
-        <>
-          <div>{formatNumber(Math.round((BLACK_HOLE_GRAVITY_G / 1e12) * 10) / 10, 1)} trilhões de G</div>
-        </>
-      ) : planetSize < 6.2 ? (
-        <div>{formatNumber(Math.round(NEUTRON_STAR_GRAVITY_G / 1e9), 0)} bilhões de G</div>
-      ) : showSun ? (
-        <div>{formatNumber(Math.max(1, Math.round(SUN_GRAVITY_G * Math.pow(100 / planetSize, 2))))} G</div>
-      ) : (
-        <div>{formatNumber(Math.ceil(Math.pow(100 / planetSize, 2)))} G</div>
+      {showGravity && (
+        <div
+          className="planet-gravity-indicator"
+          style={{
+            position: 'absolute',
+            left: `calc(50% - ${(showSun ? SUN_RADIUS_PX * (planetSize / 100) : EARTH_RADIUS_PX * (planetSize / 100)) + 30}px)`,
+            top: '50%',
+            transform: 'translate(-100%, -50%)',
+            fontSize: `${FONT_SIZE - 2}px`,
+            textAlign: 'center',
+            zIndex: 10
+          }}
+        >
+          {planetSize < 3.1 ? (
+            <>
+              <div>{formatNumber(Math.round((BLACK_HOLE_GRAVITY_G / 1e12) * 10) / 10, 1)} trilhões de G</div>
+            </>
+          ) : planetSize < 6.2 ? (
+            <div>{formatNumber(Math.round(NEUTRON_STAR_GRAVITY_G / 1e9), 0)} bilhões de G</div>
+          ) : showSun ? (
+            <div>{formatNumber(Math.max(1, Math.round(SUN_GRAVITY_G * Math.pow(100 / planetSize, 2))))} G</div>
+          ) : (
+            <div>{formatNumber(Math.ceil(Math.pow(100 / planetSize, 2)))} G</div>
+          )}
+        </div>
       )}
-      </div>
       {!showSun && (
         <div className="earth-wrapper">
           <img 
@@ -1039,6 +1161,180 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             zIndex: 1
           }}
         />
+      )}
+      {/* Satélite de teste: órbita circular puramente geométrica ao redor do Sol */}
+      {showSun && showSatellite && (
+        (() => {
+          // Raio visual do Sol em pixels (mesmo que usamos no render: (EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100)) / 2
+          const sunVisualDiameterPx = (EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100);
+          const sunVisualRadiusPx = sunVisualDiameterPx / 2;
+          // Satélite a 180px da superfície do Sol
+          const satelliteOrbitRadiusPx = sunVisualRadiusPx + 180;
+          const satX = satelliteOrbitRadiusPx * Math.cos(satelliteAngle);
+          const satY = satelliteOrbitRadiusPx * Math.sin(satelliteAngle);
+          return (
+            <div
+              className="satellite-marker"
+              style={{
+                transform: `translate(calc(-50% + ${satX}px), calc(-50% + ${satY}px))`
+              }}
+            />
+          );
+        })()
+      )}
+      {/* Satélite em órbita elíptica ao redor do Sol */}
+      {showSun && showEllipticalOrbit && (
+        <>
+          {/* Textos explicativos no canto superior esquerdo (ligados ao toggle da tecla 'u') */}
+          {showEllipseVelocities && (
+            <div className="ellipse-info-text">
+              <p>A representação da elipse está fora de proporção, para fins de melhor entendimento do fenômeno. A elipse real tem excentricidade bem menor.</p>
+              <p>Idem para a proporção e a distância Terra - Sol.</p>
+              <p>Idem para a velocidade da animação. Na vida real, uma volta inteira da Terra demora 1 ano.</p>
+              <p>As velocidades e datas escritas são reais.</p>
+            </div>
+          )}
+          {(() => {
+            // Raio visual do Sol em pixels
+            const sunVisualDiameterPx = (EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100);
+            const sunVisualRadiusPx = sunVisualDiameterPx / 2;
+          
+          // Calcular parâmetros da elipse
+          // Periastro: 50% menor que a órbita circular (de 180px para 90px da superfície)
+          const periastroPx = sunVisualRadiusPx + 90;
+          
+          // Apoastro: 50px da borda direita da tela
+          const screenWidth = window.innerWidth;
+          const screenHeight = window.innerHeight;
+          const apoastroPx = screenWidth / 2 - 50;
+          
+          // Semi-eixo maior (a) e distância focal (c)
+          const a = (periastroPx + apoastroPx) / 2;
+          const c = (apoastroPx - periastroPx) / 2;
+          
+          // Semi-eixo menor (b) - limitado por 50px das bordas superior/inferior
+          const maxB = screenHeight / 2 - 50;
+          const b = Math.min(maxB, Math.sqrt(a * a - c * c));
+          
+          // O Sol está no foco esquerdo, então o centro da elipse está deslocado para a direita
+          // O centro da elipse está em (c, 0) em relação ao Sol (que está em 0, 0)
+          const ellipseCenterX = c;
+          const ellipseCenterY = 0;
+          
+          // Calcular posição do satélite usando equação paramétrica da elipse
+          // x = ellipseCenterX + a * cos(angle)
+          // y = ellipseCenterY + b * sin(angle)
+          const satX = ellipseCenterX + a * Math.cos(ellipticalOrbitAngle);
+          const satY = ellipseCenterY + b * Math.sin(ellipticalOrbitAngle);
+          
+          // Cálculo das velocidades lineares reais (em km/s) da Terra em órbita ao redor do Sol
+          // usando os valores astronômicos de periélio/afélio e a equação de vis-viva.
+          const rPeriKm = EARTH_PERIHELION_KM;
+          const rApoKm = EARTH_APHELION_KM;
+          const aKm = EARTH_ORBIT_SEMIMAJOR_AXIS_KM;
+          // Equação de vis-viva: v = sqrt( μ * (2/r - 1/a) ), com μ do Sol em km^3/s^2
+          const vPeriKmS = Math.sqrt(
+            MU_SUN_KM3_S2 * (2 / rPeriKm - 1 / aKm)
+          );
+          const vApoKmS = Math.sqrt(
+            MU_SUN_KM3_S2 * (2 / rApoKm - 1 / aKm)
+          );
+          const vMeanKmS = (vPeriKmS + vApoKmS) / 2;
+
+          // Posições dos rótulos: esquerda, direita e acima da elipse
+          const leftX = ellipseCenterX - a - 100;   // 100px para a esquerda
+          const rightX = ellipseCenterX + a - 100;  // 100px para a esquerda
+          const topX = ellipseCenterX;
+          const topY = -b - 25 + 100; // 25px acima da elipse + 100px para baixo
+
+          // Destaque próximo aos extremos: janela de 1 segundo em torno do periélio/afélio
+          const HIGHLIGHT_WINDOW_SECONDS = 0.5;
+          const halfWindowAngle = (ELLIPTICAL_ORBIT_ANGULAR_SPEED * HIGHLIGHT_WINDOW_SECONDS) / 2;
+
+          const TWO_PI = Math.PI * 2;
+          const normalizeAngle = (angle: number) => {
+            let aNorm = angle % TWO_PI;
+            if (aNorm < 0) aNorm += TWO_PI;
+            return aNorm;
+          };
+
+          const angle = normalizeAngle(ellipticalOrbitAngle);
+
+          const angleDistance = (a: number, center: number) => {
+            const diff = Math.abs(a - center);
+            return Math.min(diff, TWO_PI - diff);
+          };
+
+          // Periélio (extremo esquerdo) em torno de π rad
+          const highlightLeft = angleDistance(angle, Math.PI) <= halfWindowAngle;
+          // Afélio (extremo direito) em torno de 0 rad
+          const highlightRight = angleDistance(angle, 0) <= halfWindowAngle;
+
+          return (
+            <>
+              {showEllipseOutline && (
+                <div
+                  className="ellipse-orbit-outline"
+                  style={{
+                    width: `${2 * a}px`,
+                    height: `${2 * b}px`,
+                    transform: `translate(calc(-50% + ${ellipseCenterX}px), calc(-50% + ${ellipseCenterY}px))`
+                  }}
+                />
+              )}
+              <div
+                className="satellite-marker"
+                style={{
+                  transform: `translate(calc(-50% + ${satX}px), calc(-50% + ${satY}px))`
+                }}
+              />
+              {showEllipseVelocities && (
+                <>
+                  {/* Velocidade no periastro (lado esquerdo da elipse) */}
+                  <div
+                    className="ellipse-velocity-label"
+                    style={{
+                      transform: `translate(calc(-50% + ${leftX + 35}px), calc(-50% - 10px))`,
+                      fontWeight: highlightLeft ? 'bold' : 'normal'
+                    }}
+                  >
+                    <span className="ellipse-velocity-value">
+                      {formatNumber(vPeriKmS, 1)} km/s
+                    </span>
+                    <br />
+                    {formatDate(3, 1)}
+                  </div>
+                  {/* Velocidade no apoastro (lado direito da elipse) */}
+                  <div
+                    className="ellipse-velocity-label"
+                    style={{
+                      transform: `translate(calc(-50% + ${rightX + 35}px), calc(-50% - 10px))`,
+                      fontWeight: highlightRight ? 'bold' : 'normal'
+                    }}
+                  >
+                    <span className="ellipse-velocity-value">
+                      {formatNumber(vApoKmS, 1)} km/s
+                    </span>
+                    <br />
+                    {formatDate(4, 7)}
+                  </div>
+                  {/* Velocidade média acima da órbita */}
+                  <div
+                    className="ellipse-velocity-label"
+                    style={{
+                      transform: `translate(calc(-50% + ${topX + 35}px), calc(-50% + ${topY}px))`
+                    }}
+                  >
+                    <span className="ellipse-velocity-value">
+                      média: {formatNumber(vMeanKmS, 1)} km/s
+                    </span>
+                  </div>
+                </>
+              )}
+            </>
+          );
+          })()}
+        </>
       )}
       {showDistanceIndicator && (
           <>
