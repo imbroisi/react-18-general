@@ -11,10 +11,10 @@
 */
 
 const VIDEO_SCRIPT: VideoAction[] = [
-  { wait:  0.2 , cmd: 'earth' },
+  { wait:  0.2 , cmd: 'star' },
   { wait:  0.3, cmd: 'toggle cannon' },
   { wait:  0.5, cmd: 'fire orbital' },
-  { wait: 15  , cmd: 'switch planet' },
+  { wait: 15  , cmd: 'rock' },
   { wait:  6  , cmd: 'shrink planet' },
   { wait: 10  , cmd: 'earth' },
   { wait:  5  , cmd: 'shrink planet' },
@@ -32,7 +32,7 @@ type VideoCommand =
   | 'switch planet'
   | 'earth'
   | 'rock'
-  | 'sun'
+  | 'star'
   | 'toggle distance'
   | 'hide instructions'
   | 'show instructions'
@@ -74,14 +74,14 @@ export { VIDEO_SCRIPT };
  * 
  * === Comandos de Controle Geral ===
  * 
- * 'hide all' - Desliga tudo, exceto planeta/Sol, indicador de gravidade e círculo tracejado
+ * 'hide all' - Desliga tudo, exceto planeta/estrela, indicador de gravidade e círculo tracejado
  *              (remove canhão, instruções, humano, balas e indicador de distância)
  * 
  * 'toggle cannon' - Toggle: apagar/mostrar canhão, texto de velocidade e balas na superfície
  *                    (se canhão estiver visível, esconde; se estiver escondido, mostra)
  * 
- * 'switch planet' - Troca entre Terra, planeta rochoso e Sol
- *                   (ciclo: Sol -> Terra -> Planeta Rochoso -> Sol)
+ * 'switch planet' - Troca entre Terra, planeta rochoso e estrela
+ *                   (ciclo: estrela -> Terra -> Planeta Rochoso -> estrela)
  *                   (também limpa todas as balas e desliga indicador de velocidade)
  * 
  * 'earth' - Muda diretamente para Terra
@@ -90,8 +90,8 @@ export { VIDEO_SCRIPT };
  * 'rock' - Muda diretamente para planeta rochoso
  *          (limpa todas as balas e desliga indicador de velocidade)
  * 
- * 'sun' - Muda diretamente para Sol
- *         (limpa todas as balas e desliga indicador de velocidade)
+ * 'star' - Muda diretamente para estrela
+ *          (limpa todas as balas e desliga indicador de velocidade)
  * 
  * 'toggle distance' - Toggle: liga/desliga indicação de altura (linha tracejada e setas)
  * 
@@ -99,13 +99,13 @@ export { VIDEO_SCRIPT };
  * 
  * === Comandos de Disparo ===
  * 
- * 'fire 1' a 'fire 6' - Dispara bala nas velocidades 1, 2, 3, 4, 5, 6 km/s (proporcional para Sol)
+ * 'fire 1' a 'fire 6' - Dispara bala nas velocidades 1, 2, 3, 4, 5, 6 km/s (proporcional para estrela)
  * 
  * 'fire orbital' - Dispara bala na velocidade orbital (ajustada)
- *                  (para Terra: ~7.3 km/s, para Sol: ~402 km/s)
+ *                  (para Terra: ~7.3 km/s, para estrela: ~402 km/s)
  * 
  * 'fire escape' - Dispara bala na velocidade de escape
- *                 (para Terra: ~9.76 km/s, para Sol: ~618 km/s)
+ *                 (para Terra: ~9.76 km/s, para estrela: ~618 km/s)
  * 
  * 'cancel fire' - Desliga mostrador de velocidade (cancela disparo agendado)
  * 

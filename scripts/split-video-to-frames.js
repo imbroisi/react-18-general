@@ -8,7 +8,7 @@ const OUTPUT_DIR = path.join(__dirname, '../public/video-element-frames');
 // Função para parsear argumentos da linha de comando
 function parseArgs() {
   const args = process.argv.slice(2);
-  const result = { url: null };
+  const result = { url: null, fileName: null };
   
   // Verificar se precisa mostrar ajuda
   if (args.includes('--help') || args.includes('-h')) {
@@ -18,12 +18,15 @@ function parseArgs() {
     console.log('    node scripts/split-video-to-frames.js --url <URL>');
     console.log('    node scripts/split-video-to-frames.js -u <URL>');
     console.log('');
-    console.log('  Processar vídeos locais (do diretório video-element-src):');
+    console.log('  Processar vídeo específico local:');
+    console.log('    node scripts/split-video-to-frames.js <nome-do-arquivo.mp4>');
+    console.log('');
+    console.log('  Processar todos os vídeos locais (do diretório video-element-src):');
     console.log('    node scripts/split-video-to-frames.js');
     console.log('');
     console.log('  Exemplo:');
     console.log('    node scripts/split-video-to-frames.js --url "https://example.com/video.mp4"');
-    console.log('    node scripts/split-video-to-frames.js --url "https://example.com/video.mov"');
+    console.log('    node scripts/split-video-to-frames.js "meu-video.mp4"');
     console.log('');
     console.log('  Formatos suportados: MP4, MOV');
     process.exit(0);
@@ -33,6 +36,12 @@ function parseArgs() {
     if ((args[i] === '--url' || args[i] === '-u') && args[i + 1]) {
       result.url = args[i + 1];
       i++;
+    } else if (!args[i].startsWith('-')) {
+      // Argumento posicional (nome do arquivo) - apenas se não começar com '-'
+      // e não for um valor de um parâmetro anterior
+      if (i === 0 || (i > 0 && args[i - 1] !== '--url' && args[i - 1] !== '-u')) {
+        result.fileName = args[i];
+      }
     }
   }
   
@@ -177,33 +186,55 @@ function main() {
       return;
     }
     
-    // Encontrar todos os arquivos de vídeo (MP4 e MOV)
-    const videoFiles = findVideoFiles(SOURCE_DIR);
-    
-    if (videoFiles.length === 0) {
-      console.log('⚠️  Nenhum arquivo MP4 ou MOV encontrado no diretório video-element-src');
-      console.log(`   Coloque os arquivos MP4 ou MOV em: ${SOURCE_DIR}`);
-      console.log('   Ou use --url <URL> para processar um vídeo de uma URL.');
-      return;
-    }
-    
-    console.log(`📹 Encontrados ${videoFiles.length} arquivo(s) de vídeo:\n`);
-    videoFiles.forEach((file, index) => {
-      console.log(`   ${index + 1}. ${file}`);
-    });
-    console.log('');
-    
-    // Processar cada vídeo
-    videoFiles.forEach((file, index) => {
-      const videoPath = path.join(SOURCE_DIR, file);
-      console.log(`\n[${index + 1}/${videoFiles.length}] Processando: ${file}`);
+    // Se um arquivo específico foi especificado, processar apenas esse
+    if (args.fileName) {
+      const videoPath = path.join(SOURCE_DIR, args.fileName);
+      
+      // Verificar se o arquivo existe
+      if (!fs.existsSync(videoPath)) {
+        console.error(`❌ Arquivo não encontrado: ${videoPath}`);
+        console.error(`   Verifique se o arquivo existe no diretório: ${SOURCE_DIR}`);
+        return;
+      }
+      
+      console.log(`📹 Processando arquivo especificado: ${args.fileName}`);
       console.log('─'.repeat(50));
       
       const frames = extractFrames(videoPath, OUTPUT_DIR);
       totalFrames += frames;
       
       console.log('─'.repeat(50));
-    });
+    } else {
+      // Se nenhum arquivo foi especificado, processar todos (comportamento antigo)
+      // Encontrar todos os arquivos de vídeo (MP4 e MOV)
+      const videoFiles = findVideoFiles(SOURCE_DIR);
+      
+      if (videoFiles.length === 0) {
+        console.log('⚠️  Nenhum arquivo MP4 ou MOV encontrado no diretório video-element-src');
+        console.log(`   Coloque os arquivos MP4 ou MOV em: ${SOURCE_DIR}`);
+        console.log('   Ou use --url <URL> para processar um vídeo de uma URL.');
+        console.log('   Ou use --file <nome> para processar um arquivo específico.');
+        return;
+      }
+      
+      console.log(`📹 Encontrados ${videoFiles.length} arquivo(s) de vídeo:\n`);
+      videoFiles.forEach((file, index) => {
+        console.log(`   ${index + 1}. ${file}`);
+      });
+      console.log('');
+      
+      // Processar cada vídeo
+      videoFiles.forEach((file, index) => {
+        const videoPath = path.join(SOURCE_DIR, file);
+        console.log(`\n[${index + 1}/${videoFiles.length}] Processando: ${file}`);
+        console.log('─'.repeat(50));
+        
+        const frames = extractFrames(videoPath, OUTPUT_DIR);
+        totalFrames += frames;
+        
+        console.log('─'.repeat(50));
+      });
+    }
   }
   
   console.log(`\n✅ Processamento concluído!`);

@@ -64,7 +64,8 @@ try {
     }
     
     // Escrever o arquivo JSON
-    fs.writeFileSync(JSON_FILE, JSON.stringify(actions, null, 2));
+    const jsonContent = JSON.stringify(actions, null, 2);
+    fs.writeFileSync(JSON_FILE, jsonContent);
     
     console.log('✅ movie-script.json sincronizado com sucesso!');
     console.log(`   ${actions.length} ações encontradas`);

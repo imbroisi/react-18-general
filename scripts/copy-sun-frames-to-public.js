@@ -6,7 +6,7 @@ const TARGET_DIR = path.join(__dirname, '../public/sun-frames');
 
 // Função para copiar frames
 function copySunFrames() {
-  console.log('📁 Copiando frames do Sol de splited-frames para public/sun-frames...\n');
+  console.log('📁 Copiando frames da estrela de splited-frames para public/sun-frames...\n');
   
   // Verificar se o diretório de origem existe
   if (!fs.existsSync(SOURCE_DIR)) {

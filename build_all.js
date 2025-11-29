@@ -95,6 +95,7 @@ function parseArgs() {
     duration: null,
     animationSpeed: null,
     unknownArg: null,
+    force: false, // Forçar download mesmo se arquivo já existir
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -102,6 +103,8 @@ function parseArgs() {
 
     if (arg === "--help" || arg === "-h") {
       result.help = true;
+    } else if (arg === "--force" || arg === "-f") {
+      result.force = true;
     } else if (arg === "--double-frames" || arg === "-d") {
       result.doubleFrames = true;
     } else if (arg === "--star" || arg === "-s") {
@@ -191,8 +194,8 @@ function runSplit(fileName) {
   );
 
   try {
-    // Rodar o script de split sem argumentos (modo local, usando mp4-source, conforme o script)
-    execSync(`node "${splitScript}"`, { stdio: "inherit" });
+    // Rodar o script de split passando o nome do arquivo como argumento posicional
+    execSync(`node "${splitScript}" "${fileName}"`, { stdio: "inherit" });
   } catch (err) {
     console.error(`Erro ao executar split-video-to-frames.js: ${err.message}`);
     process.exit(1);
@@ -266,8 +269,9 @@ function syncMovieScript() {
  * que usa o Puppeteer + FFmpeg para capturar o app React em execução.
  * @param {number|null} durationSeconds - Duração do vídeo em segundos (opcional)
  * @param {number|null} animationSpeed - Velocidade de animação (ANIMATION_SPEED) para o gerador (opcional)
+ * @param {string|null} starName - Nome da estrela para usar no nome do arquivo de saída (opcional)
  */
-function runGenerateVideo(durationSeconds = null, animationSpeed = null) {
+function runGenerateVideo(durationSeconds = null, animationSpeed = null, starName = null) {
   // Sincronizar o script antes de gerar o vídeo
   syncMovieScript();
 
@@ -292,10 +296,12 @@ function runGenerateVideo(durationSeconds = null, animationSpeed = null) {
     // Passar duração como argumento se especificada
     const durationArg = durationSeconds !== null ? `--duration ${durationSeconds}` : '';
     const speedArg = animationSpeed !== null ? `--animation-speed ${animationSpeed}` : '';
-    const args = [durationArg, speedArg].filter(arg => arg !== '').join(' ');
+    const starArg = starName !== null ? `--star ${starName}` : '';
+    const args = [durationArg, speedArg, starArg].filter(arg => arg !== '').join(' ');
     execSync(`node "${generateScript}" ${args}`.trim(), { stdio: "inherit" });
     // Caminho de saída padrão do generate-video.js (mantido em sincronia com o script)
-    const outputPath = path.join(__dirname, "output.mp4");
+    const outputFileName = starName ? `final-with-star-${starName}.mp4` : 'output.mp4';
+    const outputPath = path.join(__dirname, 'src', 'FINAL', outputFileName);
     console.log("Geração do vídeo final concluída com sucesso.");
     console.log(
       `Arquivo de vídeo gerado em:\n  ${outputPath}`
@@ -400,7 +406,7 @@ async function main() {
   console.log(`⏰ Horário de início: ${startDate.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
   console.log("");
 
-  const { fileName, doubleFrames, help, url, duration, animationSpeed, unknownArg } = parseArgs();
+  const { fileName, doubleFrames, help, url, duration, animationSpeed, unknownArg, force } = parseArgs();
 
   if (help) {
     if (unknownArg) {
@@ -435,6 +441,9 @@ async function main() {
       "  --star, -s <nome>      Define o nome do arquivo da estrela a ser baixado de S3."
     );
     console.log(
+      "  --force, -f            Força o download do vídeo mesmo se já existir localmente."
+    );
+    console.log(
       "  --double-frames, -d    Dobra a quantidade de frames gerados, criando frames intermediários"
     );
     console.log(
@@ -458,28 +467,11 @@ async function main() {
   }
 
   // Caso ESPECIFIQUE um nome de arquivo ou uma URL como parâmetro:
-  // - Sempre baixar da web, independentemente do que já existe no diretório
-  // - Antes de baixar, deletar qualquer arquivo existente no diretório
+  // - Baixar da web apenas se o arquivo não existir localmente ou se --force foi usado
   if (fileName || url) {
     // Garante que o diretório exista
     if (!fs.existsSync(VIDEO_DIR)) {
       fs.mkdirSync(VIDEO_DIR, { recursive: true });
-    }
-
-    // Deletar todos os arquivos existentes no diretório
-    const existing = listVideoFiles();
-    if (existing.length > 0) {
-      console.log(
-        `Removendo ${existing.length} arquivo(s) existente(s) em src/video-element-src antes de baixar o novo vídeo...`
-      );
-      for (const f of existing) {
-        const fullPath = path.join(VIDEO_DIR, f);
-        try {
-          fs.unlinkSync(fullPath);
-        } catch (err) {
-          console.error(`Erro ao remover arquivo ${f}: ${err.message}`);
-        }
-      }
     }
 
     // Determinar URL final e nome de arquivo local
@@ -508,34 +500,70 @@ async function main() {
 
     const destPath = path.join(VIDEO_DIR, finalFileName);
 
-    console.log(`Baixando arquivo de: ${finalUrl}`);
-    console.log(`Salvando em: ${destPath}`);
-
-    try {
-      await downloadFile(finalUrl, destPath);
-    } catch (err) {
-      console.error(
-        `Erro ao baixar o arquivo a partir da URL:\n  ${finalUrl}\nDetalhes: ${err.message}`
-      );
-      process.exit(1);
-    }
-
-    // Verificar se o arquivo foi colocado no diretório
-    let exists = false;
+    // Verificar se o arquivo já existe localmente
+    let fileExists = false;
     try {
       const stat = fs.statSync(destPath);
-      exists = stat.isFile() && stat.size > 0;
+      fileExists = stat.isFile() && stat.size > 0;
     } catch (e) {
-      exists = false;
+      fileExists = false;
     }
 
-    if (!exists) {
-      console.error(
-        `Erro: o arquivo baixado a partir da URL\n  ${finalUrl}\n` +
-          `não foi encontrado em disco ou está vazio.\n` +
-          `Caminho esperado: ${destPath}`
-      );
-      process.exit(1);
+    // Só baixar se o arquivo não existir ou se --force foi usado
+    if (!fileExists || force) {
+      console.log('');
+      console.log('═══════════════════════════════════════════════════════════════');
+      if (fileExists && force) {
+        console.log('🔄 BAIXANDO DA INTERNET (--force usado)');
+        console.log(`   Arquivo já existe, mas --force foi usado. Baixando novamente...`);
+      } else {
+        console.log('📥 BAIXANDO DA INTERNET');
+        console.log(`   Arquivo não encontrado localmente. Baixando...`);
+      }
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log('');
+      
+      console.log(`Baixando arquivo de: ${finalUrl}`);
+      console.log(`Salvando em: ${destPath}`);
+
+      try {
+        await downloadFile(finalUrl, destPath);
+      } catch (err) {
+        console.error(
+          `Erro ao baixar o arquivo a partir da URL:\n  ${finalUrl}\nDetalhes: ${err.message}`
+        );
+        process.exit(1);
+      }
+
+      // Verificar se o arquivo foi colocado no diretório
+      let exists = false;
+      try {
+        const stat = fs.statSync(destPath);
+        exists = stat.isFile() && stat.size > 0;
+      } catch (e) {
+        exists = false;
+      }
+
+      if (!exists) {
+        console.error(
+          `Erro: o arquivo baixado a partir da URL\n  ${finalUrl}\n` +
+            `não foi encontrado em disco ou está vazio.\n` +
+            `Caminho esperado: ${destPath}`
+        );
+        process.exit(1);
+      }
+      
+      console.log('');
+      console.log('✅ Download concluído com sucesso!');
+      console.log('');
+    } else {
+      console.log('');
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log('✅ USANDO CÓPIA EXISTENTE');
+      console.log(`   Arquivo já existe localmente: ${destPath}`);
+      console.log(`   Pulando download. Use --force para forçar novo download.`);
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log('');
     }
 
     // Executar o split para o arquivo recém-baixado
@@ -546,8 +574,14 @@ async function main() {
       doubleFramesWithInterpolation();
     }
 
+    // Extrair nome da estrela do fileName (remover extensão .mp4 se houver)
+    let starName = null;
+    if (fileName) {
+      starName = fileName.replace(/\.mp4$/i, '');
+    }
+
     // Gerar o vídeo final a partir dos frames (usa o app React)
-    runGenerateVideo(duration, animationSpeed);
+    runGenerateVideo(duration, animationSpeed, starName);
 
     // Mostrar resumo do processamento
     showProcessingSummary(startTime);
@@ -560,23 +594,41 @@ async function main() {
   // Passo 1: verificar arquivos existentes
   const existingFiles = listVideoFiles();
 
-  // Passo 2: mais de um arquivo -> erro
-  if (existingFiles.length > 1) {
+  // Passo 2: se não há arquivo especificado na linha de comando, requerer especificação
+  if (existingFiles.length === 0) {
     console.error(
-      `Erro: existem ${existingFiles.length} arquivos em src/video-element-src. Só pode haver um. Arquivos: ${existingFiles.join(
-        ", "
-      )}`
+      "Erro: não há arquivos em src/video-element-src e nenhum nome de arquivo foi especificado.\n" +
+      "Uso: node build_all.js --star <nome-do-arquivo.mp4>"
     );
     showProcessingSummary(startTime);
     process.exit(1);
   }
 
-  // Passo 3: se já tiver um, pular direto para o split
+  // Passo 3: se há múltiplos arquivos, requerer especificação explícita
+  if (existingFiles.length > 1) {
+    console.error(
+      `Erro: existem ${existingFiles.length} arquivos em src/video-element-src. É necessário especificar qual processar.\n` +
+      `Arquivos encontrados: ${existingFiles.join(", ")}\n` +
+      `Uso: node build_all.js --star <nome-do-arquivo.mp4>`
+    );
+    showProcessingSummary(startTime);
+    process.exit(1);
+  }
+
+  // Passo 4: se há exatamente um arquivo e não foi especificado na linha de comando,
+  // processar esse único arquivo
   if (existingFiles.length === 1) {
     const existing = existingFiles[0];
     console.log(
-      `Arquivo de vídeo já encontrado em src/video-element-src: ${existing}`
+      `Arquivo de vídeo encontrado em src/video-element-src: ${existing}`
     );
+    console.log(
+      `⚠️  Processando o único arquivo encontrado. Para ser explícito, use: --star ${existing}`
+    );
+    
+    // Extrair nome da estrela do arquivo existente
+    const starName = existing.replace(/\.mp4$/i, '');
+    
     runSplit(existing);
 
     // Opcionalmente, interpolar frames (dobrar quantidade)
@@ -585,20 +637,12 @@ async function main() {
     }
 
     // Gerar o vídeo final a partir dos frames (usa o app React)
-    runGenerateVideo(duration, animationSpeed);
+    runGenerateVideo(duration, animationSpeed, starName);
 
     // Mostrar resumo do processamento
     showProcessingSummary(startTime);
     return;
   }
-
-  // Se chegou aqui, não há arquivo no diretório e também não foi passado parâmetro
-  console.error(
-    "Erro: não há arquivos em src/video-element-src e nenhum nome de arquivo foi especificado.\n" +
-      "Uso: node build_all.js <nome-do-arquivo.mp4>"
-  );
-  showProcessingSummary(startTime);
-  process.exit(1);
 }
 
 // Armazenar startTime globalmente para uso no catch

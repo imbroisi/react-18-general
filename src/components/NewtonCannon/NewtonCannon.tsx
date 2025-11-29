@@ -11,14 +11,14 @@ import './NewtonCannon.css';
 
 const CANNON_HEIGHT = 80;
 const HUMAN_HEIGHT = 40; // Altura do humano em pixels
-const CANNON_MOUTH_OFFSET_PX = 40; // Ajuste fino vertical da boca do canhão (pode ser ajustado para alinhar a órbita no Sol)
+const CANNON_MOUTH_OFFSET_PX = 40; // Ajuste fino vertical da boca do canhão (pode ser ajustado para alinhar a órbita na estrela)
 
 /**
  * PRESET ATUAL DE PARÂMETROS FÍSICOS E VISUAIS
  *
- * - Distância do canhão: 2.000 km acima da superfície da Terra (e posição equivalente em px usada também no Sol)
+ * - Distância do canhão: 2.000 km acima da superfície da Terra (e posição equivalente em px usada também na estrela)
  * - Velocidade orbital "didática" da Terra (tecla 7): 6,9 km/s
- * - Velocidade orbital ajustada do Sol (tecla 7 no Sol): calculada para produzir órbita quase circular
+ * - Velocidade orbital ajustada da estrela (tecla 7 na estrela): calculada para produzir órbita quase circular
  *   no raio inicial real da bala (considerando geometria atual do canhão e escalas em px)
  * - ANIMATION_SPEED_BROWSER: 1200 (velocidade da animação no browser; o vídeo usa outro parâmetro)
  *
@@ -40,29 +40,29 @@ const G = 6.67430e-11; // Constante gravitacional em m³/(kg·s²)
 const C = 299792458; // Velocidade da luz em m/s
 const M_EARTH = 5.972e24; // Massa da Terra em kg
 // Constantes para o Sol
-const M_SUN = 1.989e30; // Massa do Sol em kg
+const M_STAR = 1.989e30; // Massa do Sol em kg
 // Constantes para buraco negro (usando massa do Sol)
-const SCHWARZSCHILD_RADIUS_M = (2 * G * M_SUN) / (C * C); // Raio de Schwarzschild em metros (massa do Sol)
+const SCHWARZSCHILD_RADIUS_M = (2 * G * M_STAR) / (C * C); // Raio de Schwarzschild em metros (massa do Sol)
 const SCHWARZSCHILD_DIAMETER_M = SCHWARZSCHILD_RADIUS_M * 2; // Diâmetro do horizonte de eventos em metros
-const BLACK_HOLE_GRAVITY_M_S2 = (G * M_SUN) / (SCHWARZSCHILD_RADIUS_M * SCHWARZSCHILD_RADIUS_M); // Gravidade na superfície do horizonte de eventos em m/s²
+const BLACK_HOLE_GRAVITY_M_S2 = (G * M_STAR) / (SCHWARZSCHILD_RADIUS_M * SCHWARZSCHILD_RADIUS_M); // Gravidade na superfície do horizonte de eventos em m/s²
 const BLACK_HOLE_GRAVITY_G = BLACK_HOLE_GRAVITY_M_S2 / GRAVITY_M_S2; // Gravidade em G (múltiplos da gravidade terrestre)
 // Constantes para estrela de nêutrons (raio típico para massa do Sol)
 const NEUTRON_STAR_RADIUS_M = 12000; // Raio de estrela de nêutrons em metros (~12 km, valor típico)
 const NEUTRON_STAR_DIAMETER_M = NEUTRON_STAR_RADIUS_M * 2; // Diâmetro em metros
-const NEUTRON_STAR_GRAVITY_M_S2 = (G * M_SUN) / (NEUTRON_STAR_RADIUS_M * NEUTRON_STAR_RADIUS_M); // Gravidade na superfície em m/s²
+const NEUTRON_STAR_GRAVITY_M_S2 = (G * M_STAR) / (NEUTRON_STAR_RADIUS_M * NEUTRON_STAR_RADIUS_M); // Gravidade na superfície em m/s²
 const NEUTRON_STAR_GRAVITY_G = NEUTRON_STAR_GRAVITY_M_S2 / GRAVITY_M_S2; // Gravidade em G
-const SUN_RADIUS_KM = 696340; // Raio do Sol em km
-const SUN_DIAMETER_PX = EARTH_DIAMETER + 80; // Diâmetro do Sol em pixels (visual)
-const SUN_RADIUS_PX = SUN_DIAMETER_PX / 2; // Raio do Sol em pixels
-const SUN_RADIUS_M = SUN_RADIUS_KM * 1000; // Raio do Sol em metros
-const SUN_SCALE_KM_TO_PX = SUN_RADIUS_PX / SUN_RADIUS_KM; // Escala km para pixels do Sol
-const SUN_GRAVITY_M_S2 = (G * M_SUN) / (SUN_RADIUS_M * SUN_RADIUS_M); // Gravidade na superfície do Sol em m/s²
-const SUN_GRAVITY_KM_S2 = SUN_GRAVITY_M_S2 / 1000; // Gravidade na superfície do Sol em km/s²
-const SUN_GRAVITY_G = SUN_GRAVITY_M_S2 / GRAVITY_M_S2; // Gravidade do Sol em G (múltiplos da gravidade terrestre)
-// Parâmetro gravitacional do Sol em km^3/s^2 (μ = G * M_sun, convertido para km)
-const MU_SUN_KM3_S2 = SUN_GRAVITY_KM_S2 * SUN_RADIUS_KM * SUN_RADIUS_KM;
+const STAR_RADIUS_KM = 696340; // Raio da estrela em km
+const STAR_DIAMETER_PX = EARTH_DIAMETER + 80; // Diâmetro da estrela em pixels (visual)
+const STAR_RADIUS_PX = STAR_DIAMETER_PX / 2; // Raio da estrela em pixels
+const STAR_RADIUS_M = STAR_RADIUS_KM * 1000; // Raio da estrela em metros
+const STAR_SCALE_KM_TO_PX = STAR_RADIUS_PX / STAR_RADIUS_KM; // Escala km para pixels da estrela
+const STAR_GRAVITY_M_S2 = (G * M_STAR) / (STAR_RADIUS_M * STAR_RADIUS_M); // Gravidade na superfície da estrela em m/s²
+const STAR_GRAVITY_KM_S2 = STAR_GRAVITY_M_S2 / 1000; // Gravidade na superfície da estrela em km/s²
+const STAR_GRAVITY_G = STAR_GRAVITY_M_S2 / GRAVITY_M_S2; // Gravidade da estrela em G (múltiplos da gravidade terrestre)
+// Parâmetro gravitacional da estrela em km^3/s^2 (μ = G * M_sun, convertido para km)
+const MU_STAR_KM3_S2 = STAR_GRAVITY_KM_S2 * STAR_RADIUS_KM * STAR_RADIUS_KM;
 
-// Órbita real da Terra ao redor do Sol (valores astronômicos aproximados)
+// Órbita real da Terra ao redor da estrela (valores astronômicos aproximados)
 const EARTH_PERIHELION_KM = 147.095e6;  // km no periélio
 const EARTH_APHELION_KM = 152.100e6;    // km no afélio
 const EARTH_ORBIT_SEMIMAJOR_AXIS_KM = (EARTH_PERIHELION_KM + EARTH_APHELION_KM) / 2;
@@ -72,20 +72,20 @@ const ELLIPTICAL_ORBIT_ANGULAR_SPEED = 0.5;
 // Velocidades orbitais
 const EARTH_RADIUS_M = EARTH_RADIUS_KM * 1000; // Raio da Terra em metros
 const EARTH_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_EARTH) / EARTH_RADIUS_M) / 1000; // Velocidade orbital física da Terra em km/s (~7,9 km/s)
-const SUN_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_SUN) / SUN_RADIUS_M) / 1000; // Velocidade orbital física do Sol em km/s (~437 km/s)
+const STAR_ORBITAL_VELOCITY_KM_S = Math.sqrt((G * M_STAR) / STAR_RADIUS_M) / 1000; // Velocidade orbital física da estrela em km/s (~437 km/s)
 
 // Velocidades orbitais ajustadas
 // Terra: valor "didático" de 6,9 km/s
 const EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S = 6.9;
-// Sol: raio de referência em km (1.000 km acima da superfície)
-const SUN_ORBITAL_RADIUS_KM_FOR_KEY7 = SUN_RADIUS_KM + 1000;
+// Estrela: raio de referência em km (1.000 km acima da superfície)
+const STAR_ORBITAL_RADIUS_KM_FOR_KEY7 = STAR_RADIUS_KM + 1000;
 // Como na física estamos trazendo a órbita 50px mais para dentro, o raio físico efetivo é um pouco menor:
-// r_eff_km = r_ref_km - (50 px / escala_px_por_km_do_Sol)
-const SUN_ORBITAL_RADIUS_KM_FOR_KEY7_EFFECTIVE =
-  SUN_ORBITAL_RADIUS_KM_FOR_KEY7 - (50 / SUN_SCALE_KM_TO_PX);
+// r_eff_km = r_ref_km - (50 px / escala_px_por_km_da_estrela)
+const STAR_ORBITAL_RADIUS_KM_FOR_KEY7_EFFECTIVE =
+  STAR_ORBITAL_RADIUS_KM_FOR_KEY7 - (50 / STAR_SCALE_KM_TO_PX);
 // Velocidade orbital ajustada da tecla 7 (usar raio efetivo para órbita circular)
-const SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S = Math.sqrt(
-  SUN_GRAVITY_KM_S2 * (SUN_RADIUS_KM * SUN_RADIUS_KM) / SUN_ORBITAL_RADIUS_KM_FOR_KEY7_EFFECTIVE
+const STAR_ORBITAL_VELOCITY_ADJUSTED_KM_S = Math.sqrt(
+  STAR_GRAVITY_KM_S2 * (STAR_RADIUS_KM * STAR_RADIUS_KM) / STAR_ORBITAL_RADIUS_KM_FOR_KEY7_EFFECTIVE
 );
 const ANIMATION_SPEED_BROWSER = 1200; // Multiplicador de velocidade da animação no browser (padrão)
 
@@ -114,8 +114,8 @@ const ARROW_TOP_V_POSITION = 1; // Ajuste vertical da seta de cima (em pixels)
 const ARROW_BOTTOM_V_POSITION = -9; // Ajuste vertical da seta de baixo (em pixels)
 const ROCK_PLANET_DIMENSION = 101; // Tamanho do planeta rochoso em percentagem (100% = mesmo tamanho da Terra)
 const SIZE_CHANGE_SPEED = 1; // Velocidade da mudança de tamanho do planeta em segundos (apenas para tecla "-")
-// Ângulo de lançamento (em graus) para a tecla 7 no Sol (gira o ponto de lançamento na órbita)
-const SOL_LAUNCH_ANGLE_DEG = 150;
+// Ângulo de lançamento (em graus) para a tecla 7 na estrela (gira o ponto de lançamento na órbita)
+const STAR_LAUNCH_ANGLE_DEG = 150;
 // Ângulo de rotação VISUAL das órbitas em torno do centro (em graus).
 // Ajuste esta variável para girar o desenho da órbita sem mudar a física.
 const ORBIT_ROTATION_DEG = 128;
@@ -130,24 +130,24 @@ const EARTH_VELOCITY_BY_KEY: { [key: string]: number } = {
   "5": 5,  
   "6": 6,  
   "7": EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S,    // Velocidade orbital ajustada da Terra
-  // Tecla 8: valor ajustado para que, no Sol, dê ~520 km/s (mais elíptica que a 7, mas sem escapar demais)
-  "8": (520 * EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S) / SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S,
+  // Tecla 8: valor ajustado para que, na estrela, dê ~520 km/s (mais elíptica que a 7, mas sem escapar demais)
+  "8": (520 * EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S) / STAR_ORBITAL_VELOCITY_ADJUSTED_KM_S,
   "9": 9.76,  // Velocidade de escape da Terra
 };
 
-// Velocidade de escape do Sol (sqrt(2) * velocidade orbital)
-const SUN_ESCAPE_VELOCITY_KM_S = Math.sqrt(2) * SUN_ORBITAL_VELOCITY_KM_S;
-// Velocidade da tecla 9 no Sol (valor ajustado para ~700 km/s)
-const SUN_KEY9_VELOCITY_KM_S = 700;
+// Velocidade de escape da estrela (sqrt(2) * velocidade orbital)
+const STAR_ESCAPE_VELOCITY_KM_S = Math.sqrt(2) * STAR_ORBITAL_VELOCITY_KM_S;
+// Velocidade da tecla 9 na estrela (valor ajustado para ~700 km/s)
+const STAR_KEY9_VELOCITY_KM_S = 700;
 
 // Função que retorna as velocidades baseadas no objeto visível
-const getVelocityByKey = (isSun: boolean): { [key: string]: number } => {
-  if (!isSun) {
+const getVelocityByKey = (isStar: boolean): { [key: string]: number } => {
+  if (!isStar) {
     return EARTH_VELOCITY_BY_KEY;
   }
   
-  // Para o Sol, calcular proporcionalmente baseado na velocidade orbital ajustada
-  const ratio = SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S / EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S;
+  // Para a estrela, calcular proporcionalmente baseado na velocidade orbital ajustada
+  const ratio = STAR_ORBITAL_VELOCITY_ADJUSTED_KM_S / EARTH_ORBITAL_VELOCITY_ADJUSTED_KM_S;
   
   return {
     "1": EARTH_VELOCITY_BY_KEY["1"] * ratio,
@@ -157,8 +157,8 @@ const getVelocityByKey = (isSun: boolean): { [key: string]: number } => {
     "5": EARTH_VELOCITY_BY_KEY["5"] * ratio,
     "6": EARTH_VELOCITY_BY_KEY["6"] * ratio,
     "8": EARTH_VELOCITY_BY_KEY["8"] * ratio,
-    "7": SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S,  // Velocidade orbital ajustada do Sol
-    "9": SUN_KEY9_VELOCITY_KM_S,  // Velocidade ajustada da tecla 9 no Sol (~680 km/s)
+    "7": STAR_ORBITAL_VELOCITY_ADJUSTED_KM_S,  // Velocidade orbital ajustada da estrela
+    "9": STAR_KEY9_VELOCITY_KM_S,  // Velocidade ajustada da tecla 9 na estrela (~680 km/s)
   };
 };
 
@@ -188,7 +188,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const [showInstructions, setShowInstructions] = useState<boolean>(true);
   const [showCannon, setShowCannon] = useState<boolean>(false);
   const [useRockPlanet, setUseRockPlanet] = useState<boolean>(false);
-  const [showSun, setShowSun] = useState<boolean>(false); // Sol desligado inicialmente
+  const [showStar, setShowStar] = useState<boolean>(false); // Sol desligado inicialmente
   const [showPlanet, setShowPlanet] = useState<boolean>(false); // Planeta desligado inicialmente
   const [planetSize, setPlanetSize] = useState<number>(100); // Tamanho do planeta em percentagem (100% = tamanho original)
   const [targetPlanetSize, setTargetPlanetSize] = useState<number>(100); // Tamanho alvo do planeta para animação (apenas para tecla "-")
@@ -197,7 +197,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const [humanY, setHumanY] = useState<number>(-EARTH_RADIUS_PX); // Posição Y atual do humano (topo = negativo)
   const [targetHumanY, setTargetHumanY] = useState<number>(-EARTH_RADIUS_PX); // Posição Y alvo do humano para animação (topo = negativo)
   const [showHuman, setShowHuman] = useState<boolean>(false); // Visibilidade do humano (desligado inicialmente)
-  const [sunFrameIndex, setSunFrameIndex] = useState<number>(1); // Índice do frame atual do Sol
+  const [starFrameIndex, setStarFrameIndex] = useState<number>(1); // Índice do frame atual do Sol
   const [showSatellite, setShowSatellite] = useState<boolean>(false); // Mostrar/esconder satélite de teste (tecla 't')
   const [satelliteAngle, setSatelliteAngle] = useState<number>(0); // Ângulo do satélite em radianos
   const [showEllipticalOrbit, setShowEllipticalOrbit] = useState<boolean>(false); // Mostrar/esconder órbita elíptica (tecla 'y')
@@ -217,9 +217,9 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const scriptAnimationFrameRef = useRef<number | null>(null); // Ref para o animation frame do script
   const humanYRef = useRef<number>(0);
   const previousPlanetSizeRef = useRef<number>(planetSize);
-  const sunFrameIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const starFrameIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const cannonWidthRef = useRef<number>(0);
-  const showSunRef = useRef<boolean>(showSun);
+  const showStarRef = useRef<boolean>(showStar);
   const useRockPlanetRef = useRef<boolean>(useRockPlanet);
   const animationFrameRef = useRef<number | null>(null);
   const satelliteAnimationRef = useRef<number | null>(null);
@@ -236,8 +236,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   // parecendo 2.000 km, sem alterar a física.
   const cannonMouthDistancePx = CANNON_DISTANCE_KM * SCALE_KM_TO_PX;
   const baseInitialY = -(EARTH_RADIUS_PX + cannonMouthDistancePx);
-  const initialY = showSun
-    ? baseInitialY + (SUN_RADIUS_PX * 0.2) + CANNON_MOUTH_OFFSET_PX
+  const initialY = showStar
+    ? baseInitialY + (STAR_RADIUS_PX * 0.2) + CANNON_MOUTH_OFFSET_PX
     : baseInitialY;
 
   // Obter largura do canhão após renderizar
@@ -251,8 +251,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
 
   // Atualizar refs quando os estados mudarem
   useEffect(() => {
-    showSunRef.current = showSun;
-  }, [showSun]);
+    showStarRef.current = showStar;
+  }, [showStar]);
 
   useEffect(() => {
     useRockPlanetRef.current = useRockPlanet;
@@ -260,50 +260,50 @@ const NewtonCannon = (props: NewtonCannonProps) => {
 
   // Desligar humano e indicador de altura quando o Sol estiver visível
   useEffect(() => {
-    if (showSun) {
+    if (showStar) {
       setShowHuman(false);
       setShowDistanceIndicator(false);
     }
-  }, [showSun]);
+  }, [showStar]);
 
   // Animação dos frames do Sol
   useEffect(() => {
-    if (!showSun) {
+    if (!showStar) {
       // Limpar intervalo se o Sol não estiver visível
-      if (sunFrameIntervalRef.current) {
-        clearInterval(sunFrameIntervalRef.current);
-        sunFrameIntervalRef.current = null;
+      if (starFrameIntervalRef.current) {
+        clearInterval(starFrameIntervalRef.current);
+        starFrameIntervalRef.current = null;
       }
       return;
     }
 
     // Número total de frames: 11303 frames (vídeo original tem ~3 minutos a 60fps)
-    const TOTAL_SUN_FRAMES = 11303; // Frames disponíveis do vídeo do Sol
+    const TOTAL_STAR_FRAMES = 11303; // Frames disponíveis do vídeo do Sol
     // Reduzir FPS para rotação mais lenta e visível (30 FPS = metade da velocidade original)
     const FPS = 30; // Frames por segundo (metade de 60 para rotação mais lenta)
     const FRAME_INTERVAL = 1000 / FPS; // Intervalo em milissegundos (~33.33ms)
 
     // Iniciar animação
-    sunFrameIntervalRef.current = setInterval(() => {
-      setSunFrameIndex(prev => {
+    starFrameIntervalRef.current = setInterval(() => {
+      setStarFrameIndex(prev => {
         const next = prev + 1;
         // Fazer loop quando chegar ao último frame
-        return next > TOTAL_SUN_FRAMES ? 1 : next;
+        return next > TOTAL_STAR_FRAMES ? 1 : next;
       });
     }, FRAME_INTERVAL);
 
     // Limpar intervalo ao desmontar
     return () => {
-      if (sunFrameIntervalRef.current) {
-        clearInterval(sunFrameIntervalRef.current);
-        sunFrameIntervalRef.current = null;
+      if (starFrameIntervalRef.current) {
+        clearInterval(starFrameIntervalRef.current);
+        starFrameIntervalRef.current = null;
       }
     };
-  }, [showSun]);
+  }, [showStar]);
 
   // Animação do satélite de teste (órbita circular puramente geométrica ao redor do Sol)
   useEffect(() => {
-    if (!showSun || !showSatellite) {
+    if (!showStar || !showSatellite) {
       if (satelliteAnimationRef.current) {
         cancelAnimationFrame(satelliteAnimationRef.current);
         satelliteAnimationRef.current = null;
@@ -329,11 +329,11 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         satelliteAnimationRef.current = null;
       }
     };
-  }, [showSun, showSatellite]);
+  }, [showStar, showSatellite]);
 
   // Animação da órbita elíptica (órbita elíptica puramente geométrica ao redor do Sol)
   useEffect(() => {
-    if (!showSun || !showEllipticalOrbit) {
+    if (!showStar || !showEllipticalOrbit) {
       if (ellipticalOrbitAnimationRef.current) {
         cancelAnimationFrame(ellipticalOrbitAnimationRef.current);
         ellipticalOrbitAnimationRef.current = null;
@@ -358,14 +358,23 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         ellipticalOrbitAnimationRef.current = null;
       }
     };
-  }, [showSun, showEllipticalOrbit]);
+  }, [showStar, showEllipticalOrbit]);
 
   // Carregar movie-script ao montar o componente
   useEffect(() => {
     const loadMovieScript = async () => {
       try {
-        // Adicionar timestamp para evitar cache
-        const response = await fetch(`/movie-script.json?t=${Date.now()}`);
+        // Adicionar timestamp baseado no tempo atual para evitar cache do browser
+        // Usar Math.random() também para garantir que cada reload seja único
+        const cacheBuster = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const response = await fetch(`/movie-script.json?t=${cacheBuster}`, {
+          cache: 'no-store', // Forçar não usar cache
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -398,36 +407,44 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     // Usar a ref para garantir que temos o valor mais atualizado
     const currentCannonWidth = cannonRef.current?.offsetWidth || cannonWidthRef.current || cannonWidth;
     const bulletInitialX = currentCannonWidth / 2;
+    
+    // Calcular initialY dinamicamente baseado no estado atual (usando ref para garantir valor atualizado)
+    const currentShowStar = showStarRef.current;
+    const cannonMouthDistancePx = CANNON_DISTANCE_KM * SCALE_KM_TO_PX;
+    const baseInitialY = -(EARTH_RADIUS_PX + cannonMouthDistancePx);
+    const currentInitialY = currentShowStar
+      ? baseInitialY + (STAR_RADIUS_PX * 0.2) + CANNON_MOUTH_OFFSET_PX
+      : baseInitialY;
 
     let x0 = bulletInitialX;
-    let y0 = initialY;
+    let y0 = currentInitialY;
     let vx0: number;
     let vy0: number;
 
-    // Caso especial: Sol + tecla 7 → lançar em um ponto girado na órbita com velocidade tangencial,
-    // usando o raio definido para a órbita circular (SUN_ORBITAL_RADIUS_KM_FOR_KEY7)
-    if (showSun && key === '7') {
-      const theta = (SOL_LAUNCH_ANGLE_DEG * Math.PI) / 180;
+    // Caso especial: estrela + tecla 7 → lançar em um ponto girado na órbita com velocidade tangencial,
+    // usando o raio definido para a órbita circular (STAR_ORBITAL_RADIUS_KM_FOR_KEY7)
+    if (currentShowStar && key === '7') {
+      const theta = (STAR_LAUNCH_ANGLE_DEG * Math.PI) / 180;
 
-      // Raio físico em km (raio da órbita circular escolhido para a tecla 7 no Sol)
-      const rKm = SUN_ORBITAL_RADIUS_KM_FOR_KEY7;
+      // Raio físico em km (raio da órbita circular escolhido para a tecla 7 na estrela)
+      const rKm = STAR_ORBITAL_RADIUS_KM_FOR_KEY7;
       // Converter para pixels e trazer a órbita 50px mais para dentro (mais próxima da superfície)
-      const rPx = rKm * SUN_SCALE_KM_TO_PX - 50;
+      const rPx = rKm * STAR_SCALE_KM_TO_PX - 50;
 
       // Posição inicial da bala em relação ao centro
       x0 = rPx * Math.cos(theta);
       y0 = rPx * Math.sin(theta);
 
       // Velocidade tangencial (perpendicular ao raio)
-      const vPxPerS = velocity * SUN_SCALE_KM_TO_PX;
+      const vPxPerS = velocity * STAR_SCALE_KM_TO_PX;
       vx0 = vPxPerS * (-Math.sin(theta));
       vy0 = vPxPerS * (Math.cos(theta));
     } else {
-      // Comportamento padrão (Terra, outras teclas, Sol em outras velocidades)
-      const currentScaleKmToPx = showSun ? SUN_SCALE_KM_TO_PX : SCALE_KM_TO_PX;
+      // Comportamento padrão (Terra, outras teclas, estrela em outras velocidades)
+      const currentScaleKmToPx = currentShowStar ? STAR_SCALE_KM_TO_PX : SCALE_KM_TO_PX;
       const initialVelocityPxS = velocity * currentScaleKmToPx;
       x0 = bulletInitialX;
-      y0 = initialY;
+      y0 = currentInitialY;
       vx0 = initialVelocityPxS;
       vy0 = 0;
     }
@@ -446,7 +463,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     };
     
     setBullets(prev => [...prev, newBullet]);
-  }, [cannonWidth, showSun, initialY]);
+  }, [cannonWidth]);
 
   // Função para executar um comando do browser-script
   const executeCommand = useCallback((cmd: string) => {
@@ -456,20 +473,42 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     switch (normalizedCmd) {
       // Controle geral
       case 'hide all':
+        console.log('🔧 Executando hide all - mantendo instruções visíveis, showInstructions atual:', showInstructions);
         setShowCannon(false);
         setShowDistanceIndicator(false);
-        setShowInstructions(false);
+        // NÃO desligar instruções - mantém visíveis
+        // setShowInstructions(false); // REMOVIDO - instruções devem permanecer visíveis
         setShowHuman(false);
         setShowGravity(false);
         setShowPlanet(false);
-        setShowSun(false);
+        setShowStar(false);
         setSelectedVelocity(null);
         setBullets([]);
+        // Garantir que as instruções permaneçam visíveis
+        setShowInstructions(true);
+        // Parar animação de balas
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
           animationFrameRef.current = null;
         }
         isAnimatingRef.current = false;
+        // Parar script e limpar cronômetro/lista de comandos
+        if (scriptAnimationFrameRef.current) {
+          cancelAnimationFrame(scriptAnimationFrameRef.current);
+          scriptAnimationFrameRef.current = null;
+        }
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+        setIsScriptRunning(false);
+        isScriptRunningRef.current = false;
+        setElapsedTime(0);
+        setCurrentCommandIndex(-1);
+        setExecutedCommands(new Set());
+        // Limpar timeouts do script
+        scriptTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+        scriptTimeoutsRef.current = [];
         break;
       case 'toggle cannon':
         setShowCannon(prev => !prev);
@@ -479,58 +518,108 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         }
         break;
       case 'switch planet':
-        if (showSun) {
-          setShowSun(false);
+        if (showStar) {
+          // Estrela -> Terra: limpar balas ANTES de mudar o estado
+          setBullets([]);
+          setSelectedVelocity(null);
+          if (fireTimeoutRef.current) {
+            clearTimeout(fireTimeoutRef.current);
+            fireTimeoutRef.current = null;
+          }
+          setShowStar(false);
+          showStarRef.current = false; // Atualizar ref imediatamente
           setUseRockPlanet(false);
           setPlanetSize(100);
           setShowPlanet(true);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
         } else if (useRockPlanet) {
-          setShowSun(true);
+          // Rochoso -> Estrela: limpar balas ANTES de mudar o estado
+          setBullets([]);
+          setSelectedVelocity(null);
+          if (fireTimeoutRef.current) {
+            clearTimeout(fireTimeoutRef.current);
+            fireTimeoutRef.current = null;
+          }
+          setShowStar(true);
+          showStarRef.current = true; // Atualizar ref imediatamente
           setUseRockPlanet(false);
           setPlanetSize(100);
           setShowPlanet(true);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
         } else {
-          setShowSun(false);
+          // Terra -> Rochoso: NÃO limpar balas (mantém a bala voando) e mantém a proporção atual
+          setShowStar(false);
+          showStarRef.current = false; // Atualizar ref imediatamente
           setUseRockPlanet(true);
-          setPlanetSize(ROCK_PLANET_DIMENSION);
+          // Não alterar planetSize - mantém a proporção atual
           setShowPlanet(true);
-        }
-        setBullets([]);
-        setSelectedVelocity(null);
-        if (fireTimeoutRef.current) {
-          clearTimeout(fireTimeoutRef.current);
-          fireTimeoutRef.current = null;
         }
         break;
       case 'earth':
         console.log('🌍 Executando comando: earth');
-        setShowSun(false);
-        setUseRockPlanet(false);
-        setPlanetSize(100);
-        setShowPlanet(true);
-        setBullets([]);
-        setSelectedVelocity(null);
-        if (fireTimeoutRef.current) {
-          clearTimeout(fireTimeoutRef.current);
-          fireTimeoutRef.current = null;
+        const wasStar = showStar;
+        // Limpar balas ANTES de mudar o estado para evitar renderização de balas fantasmas
+        if (wasStar) {
+          setBullets([]);
+          setSelectedVelocity(null);
+          if (fireTimeoutRef.current) {
+            clearTimeout(fireTimeoutRef.current);
+            fireTimeoutRef.current = null;
+          }
         }
+        setShowStar(false);
+        showStarRef.current = false; // Atualizar ref imediatamente
+        setUseRockPlanet(false);
+        // Se estiver vindo da estrela, resetar para 100% e desligar órbita e canhão. Se estiver vindo do Rochoso, manter proporção atual
+        if (wasStar) {
+          setPlanetSize(100);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
+        }
+        // Se estiver vindo do Rochoso, não alterar planetSize - mantém a proporção atual
+        setShowPlanet(true);
         break;
       case 'rock':
-        setShowSun(false);
-        setUseRockPlanet(true);
-        setPlanetSize(ROCK_PLANET_DIMENSION);
-        setShowPlanet(true);
-        setBullets([]);
-        setSelectedVelocity(null);
-        if (fireTimeoutRef.current) {
-          clearTimeout(fireTimeoutRef.current);
-          fireTimeoutRef.current = null;
+        const wasStarForRock = showStar;
+        // Limpar balas ANTES de mudar o estado para evitar renderização de balas fantasmas
+        if (wasStarForRock) {
+          setBullets([]);
+          setSelectedVelocity(null);
+          if (fireTimeoutRef.current) {
+            clearTimeout(fireTimeoutRef.current);
+            fireTimeoutRef.current = null;
+          }
         }
+        setShowStar(false);
+        showStarRef.current = false; // Atualizar ref imediatamente
+        setUseRockPlanet(true);
+        // Se estiver vindo da estrela, resetar para ROCK_PLANET_DIMENSION e desligar órbita e canhão. Se estiver vindo da Terra, manter proporção atual
+        if (wasStarForRock) {
+          setPlanetSize(ROCK_PLANET_DIMENSION);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
+        }
+        // Se estiver vindo da Terra, não alterar planetSize - mantém a proporção atual
+        setShowPlanet(true);
         break;
-      case 'sun':
-        setShowSun(true);
+      case 'star':
+        const wasPlanet = !showStar;
+        setShowStar(true);
+        showStarRef.current = true; // Atualizar ref imediatamente para uso em comandos subsequentes
         setUseRockPlanet(false);
-        setPlanetSize(100);
+        // Se estiver vindo de planeta, resetar para 100% e desligar órbita e canhão
+        if (wasPlanet) {
+          setPlanetSize(100);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
+        }
         setShowPlanet(true);
         setBullets([]);
         setSelectedVelocity(null);
@@ -556,7 +645,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
       case 'fire 5':
       case 'fire 6':
         const fireKey = normalizedCmd.split(' ')[1];
-        const velocityByKey = getVelocityByKey(showSun);
+        // Usar showStarRef.current para garantir valor atualizado quando comandos são executados rapidamente
+        const velocityByKey = getVelocityByKey(showStarRef.current);
         if (fireKey in velocityByKey) {
           const velocity = velocityByKey[fireKey];
           setSelectedVelocity(null);
@@ -574,7 +664,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         break;
       case 'fire orbital':
         const orbitalKey = '7';
-        const orbitalVelocity = getVelocityByKey(showSun)[orbitalKey];
+        // Usar showStarRef.current para garantir valor atualizado quando comandos são executados rapidamente
+        const orbitalVelocity = getVelocityByKey(showStarRef.current)[orbitalKey];
         setSelectedVelocity(null);
         setTimeout(() => {
           setSelectedVelocity(orbitalVelocity);
@@ -589,7 +680,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         break;
       case 'fire escape':
         const escapeKey = '9';
-        const escapeVelocity = getVelocityByKey(showSun)[escapeKey];
+        // Usar showStarRef.current para garantir valor atualizado quando comandos são executados rapidamente
+        const escapeVelocity = getVelocityByKey(showStarRef.current)[escapeKey];
         setSelectedVelocity(null);
         setTimeout(() => {
           setSelectedVelocity(escapeVelocity);
@@ -642,7 +734,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
       default:
         console.warn(`⚠️  Comando desconhecido: "${cmd}"`);
     }
-  }, [showSun, useRockPlanet, showCannon, humanPosition, planetSize, handleFire]);
+  }, [showStar, useRockPlanet, showCannon, humanPosition, planetSize, handleFire]);
 
   // Função para executar o movie-script (mesmo script usado para geração de vídeo)
   const executeBrowserScript = useCallback(() => {
@@ -809,7 +901,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         return;
       }
       
-      const velocityByKey = getVelocityByKey(showSunRef.current);
+      const velocityByKey = getVelocityByKey(showStarRef.current);
       if (key in velocityByKey) {
         const velocity = velocityByKey[key];
         
@@ -908,35 +1000,63 @@ const NewtonCannon = (props: NewtonCannonProps) => {
       // Comandos específicos para ir direto para cada planeta
       if (event.key === 'q' || event.key === 'Q') {
         // Ir direto para Terra
-        setShowSun(false);
+        const wasStarForQ = showStar;
+        setShowStar(false);
+        showStarRef.current = false;
         setUseRockPlanet(false);
-        setPlanetSize(100);
-        setShowPlanet(true);
-        setBullets([]);
-        setSelectedVelocity(null);
-        if (fireTimeoutRef.current) {
-          clearTimeout(fireTimeoutRef.current);
-          fireTimeoutRef.current = null;
+        // Se estiver vindo da estrela, resetar para 100% e desligar órbita e canhão. Se estiver vindo do Rochoso, manter proporção atual
+        if (wasStarForQ) {
+          setPlanetSize(100);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
+          // Limpar balas quando muda de estrela para planeta
+          setBullets([]);
+          setSelectedVelocity(null);
+          if (fireTimeoutRef.current) {
+            clearTimeout(fireTimeoutRef.current);
+            fireTimeoutRef.current = null;
+          }
         }
+        // Se estiver vindo do Rochoso, não alterar planetSize - mantém a proporção atual
+        setShowPlanet(true);
       }
       if (event.key === 'w' || event.key === 'W') {
         // Ir direto para planeta rochoso
-        setShowSun(false);
+        const wasStarForW = showStar;
+        setShowStar(false);
+        showStarRef.current = false;
         setUseRockPlanet(true);
-        setPlanetSize(ROCK_PLANET_DIMENSION);
-        setShowPlanet(true);
-        setBullets([]);
-        setSelectedVelocity(null);
-        if (fireTimeoutRef.current) {
-          clearTimeout(fireTimeoutRef.current);
-          fireTimeoutRef.current = null;
+        // Se estiver vindo da estrela, resetar para ROCK_PLANET_DIMENSION e desligar órbita e canhão. Se estiver vindo da Terra, manter proporção atual
+        if (wasStarForW) {
+          setPlanetSize(ROCK_PLANET_DIMENSION);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
+          // Limpar balas quando muda de estrela para planeta
+          setBullets([]);
+          setSelectedVelocity(null);
+          if (fireTimeoutRef.current) {
+            clearTimeout(fireTimeoutRef.current);
+            fireTimeoutRef.current = null;
+          }
         }
+        // Se estiver vindo da Terra, não alterar planetSize - mantém a proporção atual
+        setShowPlanet(true);
       }
       if (event.key === 'e' || event.key === 'E') {
-        // Ir direto para Sol
-        setShowSun(true);
+        // Ir direto para estrela
+        const wasPlanetForE = !showStar;
+        setShowStar(true);
+        showStarRef.current = true;
         setUseRockPlanet(false);
-        setPlanetSize(100);
+        // Se estiver vindo de planeta, resetar para 100% e desligar órbita e canhão
+        if (wasPlanetForE) {
+          setPlanetSize(100);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
+        }
         setShowPlanet(true);
         setBullets([]);
         setSelectedVelocity(null);
@@ -946,21 +1066,33 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         }
       }
       if (event.key === 'r' || event.key === 'R') {
-        // Trocar entre Terra, planeta rochoso e Sol
-        if (showSun) {
-          setShowSun(false);
+        // Trocar entre Terra, planeta rochoso e estrela
+        if (showStar) {
+          // Estrela -> Terra: resetar para 100% e desligar órbita e canhão
+          setShowStar(false);
+          showStarRef.current = false;
           setUseRockPlanet(false);
           setPlanetSize(100);
           setShowPlanet(true);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
         } else if (useRockPlanet) {
-          setShowSun(true);
+          // Rochoso -> Estrela: resetar para 100% e desligar órbita e canhão
+          setShowStar(true);
+          showStarRef.current = true;
           setUseRockPlanet(false);
           setPlanetSize(100);
           setShowPlanet(true);
+          setShowCannon(false);
+          setShowEllipticalOrbit(false);
+          setShowEllipseOutline(false);
         } else {
-          setShowSun(false);
+          // Terra -> Rochoso: manter proporção atual
+          setShowStar(false);
+          showStarRef.current = false;
           setUseRockPlanet(true);
-          setPlanetSize(ROCK_PLANET_DIMENSION);
+          // Não alterar planetSize - mantém a proporção atual
           setShowPlanet(true);
         }
         setBullets([]);
@@ -1005,11 +1137,10 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         setShowHuman(prev => !prev);
       }
       if (event.key === 'z' || event.key === 'Z') {
-        // Toggle: desligar/ligar tudo, exceto planeta/Sol e círculo tracejado
+        // Toggle: desligar/ligar tudo, exceto planeta/Sol, círculo tracejado e instruções
         const allOff =
           !showCannon &&
           !showDistanceIndicator &&
-          !showInstructions &&
           !showHuman &&
           !showGravity;
 
@@ -1017,15 +1148,15 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           // Reativar elementos principais
           setShowCannon(true);
           setShowDistanceIndicator(true);
-          setShowInstructions(true);
+          // Instruções sempre permanecem visíveis
           setShowHuman(true);
           setShowGravity(true);
           // Não reativar planeta automaticamente - deixar como está
         } else {
-          // Desligar tudo
+          // Desligar tudo, mas manter instruções visíveis
           setShowCannon(false);
           setShowDistanceIndicator(false);
-          setShowInstructions(false);
+          // NÃO desligar instruções - mantém visíveis
           setShowHuman(false);
           setShowGravity(false);
           setSelectedVelocity(null);
@@ -1037,6 +1168,8 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             animationFrameRef.current = null;
           }
           isAnimatingRef.current = false;
+          // Garantir que as instruções permaneçam visíveis
+          setShowInstructions(true);
           // Não desligar planeta/Sol - manter como está
         }
       }
@@ -1046,7 +1179,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [showCannon, humanPosition, planetSize, showDistanceIndicator, showInstructions, showHuman, showGravity, showSun, useRockPlanet, executeBrowserScript]);
+  }, [showCannon, humanPosition, planetSize, showDistanceIndicator, showInstructions, showHuman, showGravity, showStar, useRockPlanet, executeBrowserScript]);
 
   // Inicializar posição Y do humano na linha tracejada (superfície a 100%)
   useEffect(() => {
@@ -1196,20 +1329,20 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             const distanceFromCenter = Math.sqrt(currentX * currentX + currentY * currentY);
             
             // Determinar raio e gravidade baseado no objeto visível
-            const isSun = showSun;
-            // Para o Sol, o raio visual foi reduzido em 20% (0.8x), então usamos 0.8 * SUN_RADIUS_PX
-            const objectRadiusPx = isSun
-              ? SUN_RADIUS_PX * 0.8 * (planetSize / 100)
+            const isStar = showStar;
+            // Para o Sol, o raio visual foi reduzido em 20% (0.8x), então usamos 0.8 * STAR_RADIUS_PX
+            const objectRadiusPx = isStar
+              ? STAR_RADIUS_PX * 0.8 * (planetSize / 100)
               : EARTH_RADIUS_PX * (planetSize / 100);
             // Para o Sol, a bala para 32px mais dentro, então a física só aplica fora desse raio
-            const physicsRadiusPx = isSun ? objectRadiusPx - 32 : objectRadiusPx;
-            const objectRadiusKm = isSun ? SUN_RADIUS_KM : EARTH_RADIUS_KM;
-            const scaleKmToPx = isSun ? SUN_SCALE_KM_TO_PX : SCALE_KM_TO_PX;
+            const physicsRadiusPx = isStar ? objectRadiusPx - 32 : objectRadiusPx;
+            const objectRadiusKm = isStar ? STAR_RADIUS_KM : EARTH_RADIUS_KM;
+            const scaleKmToPx = isStar ? STAR_SCALE_KM_TO_PX : SCALE_KM_TO_PX;
             
             if (distanceFromCenter > 0 && distanceFromCenter > physicsRadiusPx) {
               // Calcular aceleração gravitacional (lei do inverso do quadrado)
               const currentDistanceKm = distanceFromCenter / scaleKmToPx;
-              const gravityAtSurface = isSun ? SUN_GRAVITY_KM_S2 : GRAVITY_KM_S2; // Gravidade na superfície em km/s²
+              const gravityAtSurface = isStar ? STAR_GRAVITY_KM_S2 : GRAVITY_KM_S2; // Gravidade na superfície em km/s²
               const gravityAtDistance = gravityAtSurface * Math.pow(objectRadiusKm / currentDistanceKm, 2);
               const gravityPxS2 = gravityAtDistance * scaleKmToPx;
               
@@ -1257,11 +1390,11 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           // Verificar se a bala colidiu com o objeto (Terra ou Sol)
           const newDistanceFromCenter = Math.sqrt(newX * newX + newY * newY);
           // Raio visual atual do objeto (Terra ou Sol)
-          const currentObjectRadiusPx = showSun
-            ? SUN_RADIUS_PX * 0.8 * (planetSize / 100)
+          const currentObjectRadiusPx = showStar
+            ? STAR_RADIUS_PX * 0.8 * (planetSize / 100)
             : EARTH_RADIUS_PX * (planetSize / 100);
           // Para o Sol, a bala para 32px mais dentro
-          const collisionRadiusPx = showSun ? currentObjectRadiusPx - 32 : currentObjectRadiusPx;
+          const collisionRadiusPx = showStar ? currentObjectRadiusPx - 32 : currentObjectRadiusPx;
           if (hasCollided || newDistanceFromCenter <= collisionRadiusPx) {
             // Bala colidiu com o objeto - posicionar na superfície (ou 32px dentro para o Sol)
             const angle = Math.atan2(newY, newX);
@@ -1316,7 +1449,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         isAnimatingRef.current = false;
       }
     };
-  }, [bullets, cannonWidth, initialY, showSun, planetSize]);
+  }, [bullets, cannonWidth, initialY, showStar, planetSize]);
 
   // Função para formatar velocidade em km/s com uma casa decimal
   const formatVelocity = (velocity: number): string => {
@@ -1439,7 +1572,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           <table className="instructions-table" style={{ fontSize: `${FONT_SIZE - 2}px` }}>
             <tbody>
               {/* Disparo (linha numérica) */}
-              {Object.entries(getVelocityByKey(showSun)).sort(([a], [b]) => {
+              {Object.entries(getVelocityByKey(showStar)).sort(([a], [b]) => {
                 // Ordenar: números primeiro (1-9), depois 0
                 if (a === '0') return 1;
                 if (b === '0') return -1;
@@ -1492,19 +1625,19 @@ const NewtonCannon = (props: NewtonCannonProps) => {
               </tr>
               <tr>
                 <td>e</td>
-                <td>muda diretamente para Sol</td>
+                <td>muda diretamente para estrela</td>
               </tr>
               <tr>
                 <td>r</td>
-                <td>troca entre Terra, planeta rochoso e Sol</td>
+                <td>troca entre Terra, planeta rochoso e estrela</td>
               </tr>
               <tr>
                 <td>t</td>
-                <td>liga/desliga satélite em órbita circular ao redor do Sol</td>
+                <td>liga/desliga satélite em órbita circular ao redor da estrela</td>
               </tr>
               <tr>
                 <td>y</td>
-                <td>liga/desliga satélite em órbita elíptica ao redor do Sol</td>
+                <td>liga/desliga satélite em órbita elíptica ao redor da estrela</td>
               </tr>
               <tr>
                 <td>u</td>
@@ -1566,10 +1699,10 @@ const NewtonCannon = (props: NewtonCannonProps) => {
               // Circunferência de referência exatamente sobre a superfície:
               // - Para a Terra/rochoso: EARTH_DIAMETER (fixo, não acompanha mudança de tamanho)
               // - Para o Sol: diâmetro visual em 100% (com fator 0.8) - 50 (fixo)
-              width: `${showSun 
+              width: `${showStar 
                 ? (EARTH_DIAMETER + 80) * 0.8 - 50 
                 : EARTH_DIAMETER}px`,
-              height: `${showSun 
+              height: `${showStar 
                 ? (EARTH_DIAMETER + 80) * 0.8 - 50 
                 : EARTH_DIAMETER}px`,
               zIndex: 5
@@ -1579,7 +1712,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             className="planet-size-indicator"
             style={{
               position: 'absolute',
-              left: `calc(50% + ${(showSun ? SUN_RADIUS_PX : EARTH_RADIUS_PX) + 50}px)`,
+              left: `calc(50% + ${(showStar ? STAR_RADIUS_PX : EARTH_RADIUS_PX) + 50}px)`,
               top: '50%',
               transform: 'translateY(-50%)',
               fontSize: `${FONT_SIZE - 2}px`
@@ -1599,13 +1732,13 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           </div>
         </>
       )}
-      {/* Indicador de gravidade na superfície atual do planeta/Sol */}
+      {/* Indicador de gravidade na superfície atual do planeta/estrela */}
       {showGravity && (
         <div
           className="planet-gravity-indicator"
           style={{
             position: 'absolute',
-            left: `calc(50% - ${(showSun ? SUN_RADIUS_PX * (planetSize / 100) : EARTH_RADIUS_PX * (planetSize / 100)) + 30}px)`,
+            left: `calc(50% - ${(showStar ? STAR_RADIUS_PX * (planetSize / 100) : EARTH_RADIUS_PX * (planetSize / 100)) + 30}px)`,
             top: '50%',
             transform: 'translate(-100%, -50%)',
             fontSize: `${FONT_SIZE - 2}px`,
@@ -1619,14 +1752,14 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             </>
           ) : planetSize < 6.2 ? (
             <div>{formatNumber(Math.round(NEUTRON_STAR_GRAVITY_G / 1e9), 0)} bilhões de G</div>
-          ) : showSun ? (
-            <div>{formatNumber(Math.max(1, Math.round(SUN_GRAVITY_G * Math.pow(100 / planetSize, 2))))} G</div>
+          ) : showStar ? (
+            <div>{formatNumber(Math.max(1, Math.round(STAR_GRAVITY_G * Math.pow(100 / planetSize, 2))))} G</div>
           ) : (
             <div>{formatNumber(Math.ceil(Math.pow(100 / planetSize, 2)))} G</div>
           )}
         </div>
       )}
-      {!showSun && showPlanet && (
+      {!showStar && showPlanet && (
         <div className="earth-wrapper">
           <img 
             src={useRockPlanet ? planetaRochosoImage : terraImage} 
@@ -1666,9 +1799,9 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         </>
       )}
       {/* Sol */}
-      {showSun && (
+      {showStar && (
         <img
-          src={`/video-element-frames/frame-${String(sunFrameIndex).padStart(6, '0')}.png`}
+          src={`/video-element-frames/frame-${String(starFrameIndex).padStart(6, '0')}.png`}
           alt="Sol animado"
           style={{
             position: 'absolute',
@@ -1686,13 +1819,13 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         />
       )}
       {/* Satélite de teste: órbita circular puramente geométrica ao redor do Sol */}
-      {showSun && showSatellite && (
+      {showStar && showSatellite && (
         (() => {
           // Raio visual do Sol em pixels (mesmo que usamos no render: (EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100)) / 2
-          const sunVisualDiameterPx = (EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100);
-          const sunVisualRadiusPx = sunVisualDiameterPx / 2;
+          const starVisualDiameterPx = (EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100);
+          const starVisualRadiusPx = starVisualDiameterPx / 2;
           // Satélite a 180px da superfície do Sol
-          const satelliteOrbitRadiusPx = sunVisualRadiusPx + 180;
+          const satelliteOrbitRadiusPx = starVisualRadiusPx + 180;
           const satX = satelliteOrbitRadiusPx * Math.cos(satelliteAngle);
           const satY = satelliteOrbitRadiusPx * Math.sin(satelliteAngle);
           return (
@@ -1705,24 +1838,24 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           );
         })()
       )}
-      {/* Satélite em órbita elíptica ao redor do Sol */}
-      {showSun && showEllipticalOrbit && (
+      {/* Satélite em órbita elíptica ao redor da estrela */}
+      {showStar && showEllipticalOrbit && (
         <>
           {/* Textos explicativos no canto superior esquerdo (ligados ao toggle da tecla 'u') */}
           <div className={`ellipse-info-text ${showEllipseVelocities ? 'visible' : ''}`}>
             <p>A representação da elipse está fora de proporção, para fins de melhor entendimento do fenômeno. A elipse real tem excentricidade bem menor.</p>
-            <p>Idem para a proporção e a distância Terra - Sol.</p>
+            <p>Idem para a proporção e a distância Terra - estrela.</p>
             <p>Idem para a velocidade da animação. Na vida real, uma volta inteira da Terra demora 1 ano.</p>
             <p>As velocidades e datas escritas são reais.</p>
           </div>
           {(() => {
             // Raio visual do Sol em pixels
-            const sunVisualDiameterPx = (EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100);
-            const sunVisualRadiusPx = sunVisualDiameterPx / 2;
+            const starVisualDiameterPx = (EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100);
+            const starVisualRadiusPx = starVisualDiameterPx / 2;
           
           // Calcular parâmetros da elipse
           // Periastro: 50% menor que a órbita circular (de 180px para 90px da superfície)
-          const periastroPx = sunVisualRadiusPx + 90;
+          const periastroPx = starVisualRadiusPx + 90;
           
           // Apoastro: 50px da borda direita da tela
           const screenWidth = window.innerWidth;
@@ -1755,10 +1888,10 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           const aKm = EARTH_ORBIT_SEMIMAJOR_AXIS_KM;
           // Equação de vis-viva: v = sqrt( μ * (2/r - 1/a) ), com μ do Sol em km^3/s^2
           const vPeriKmS = Math.sqrt(
-            MU_SUN_KM3_S2 * (2 / rPeriKm - 1 / aKm)
+            MU_STAR_KM3_S2 * (2 / rPeriKm - 1 / aKm)
           );
           const vApoKmS = Math.sqrt(
-            MU_SUN_KM3_S2 * (2 / rApoKm - 1 / aKm)
+            MU_STAR_KM3_S2 * (2 / rApoKm - 1 / aKm)
           );
           const vMeanKmS = (vPeriKmS + vApoKmS) / 2;
 
@@ -1935,22 +2068,27 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           const isVisible = Math.abs(bullet.x) < visibleArea && 
                            Math.abs(bullet.y) < visibleArea;
           
-          // Se colidiu com o Sol, não renderizar (desaparece)
-          if (!bullet.isActive && showSun) {
+          // Se colidiu com a estrela, não renderizar (desaparece)
+          if (!bullet.isActive && showStar) {
             return null;
           }
           
-          // Só renderizar se estiver visível ou se colidiu (para mostrar onde caiu na Terra)
+          // Se colidiu com planeta e não está na estrela, não renderizar (evita balas fantasmas após mudança)
+          if (!bullet.isActive && !showStar) {
+            return null;
+          }
+          
+          // Só renderizar se estiver visível e ativa
           if (!isVisible && bullet.isActive) {
             return null;
           }
 
           // Aplicar rotação VISUAL da órbita em torno do centro APENAS para a tecla 7 no Sol.
           // Identificamos a tecla 7 no Sol pelo valor de velocidade inicial em km/s
-          // igual a SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S.
+          // igual a STAR_ORBITAL_VELOCITY_ADJUSTED_KM_S.
           let renderX = bullet.x;
           let renderY = bullet.y;
-          if (showSun && bullet.initialVelocity === SUN_ORBITAL_VELOCITY_ADJUSTED_KM_S) {
+          if (showStar && bullet.initialVelocity === STAR_ORBITAL_VELOCITY_ADJUSTED_KM_S) {
             const angleRad = (ORBIT_ROTATION_DEG * Math.PI) / 180;
             const cosA = Math.cos(angleRad);
             const sinA = Math.sin(angleRad);

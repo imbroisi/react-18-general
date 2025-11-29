@@ -1,7 +1,7 @@
 [
   {
     "wait": 0.2,
-    "cmd": "earth"
+    "cmd": "star"
   },
   {
     "wait": 0.3,
@@ -13,7 +13,7 @@
   },
   {
     "wait": 15,
-    "cmd": "switch planet"
+    "cmd": "rock"
   },
   {
     "wait": 6,

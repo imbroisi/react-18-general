@@ -3,9 +3,9 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 /**
- * INSTRUÇÕES PARA GERAR VÍDEO DO SOL COM FUNDO TRANSPARENTE:
+ * INSTRUÇÕES PARA GERAR VÍDEO DA ESTRELA COM FUNDO TRANSPARENTE:
  * 
- * Para preservar a transparência dos frames PNG do Sol no vídeo final:
+ * Para preservar a transparência dos frames PNG da estrela no vídeo final:
  * 1. Altere VIDEO_FORMAT abaixo para 'mov' (MP4 não suporta transparência)
  * 2. O script automaticamente usará ProRes 4444 quando VIDEO_FORMAT for 'mov'
  * 3. ProRes 4444 preserva o canal alpha (transparência)
@@ -13,12 +13,12 @@ const { execSync } = require('child_process');
  * Exemplo:
  *   const VIDEO_FORMAT = 'mov'; // Para preservar transparência
  * 
- * Nota: Se os frames PNG do Sol têm fundo transparente, o vídeo MOV gerado
+ * Nota: Se os frames PNG da estrela têm fundo transparente, o vídeo MOV gerado
  * também terá transparência preservada, permitindo composição sobre outros elementos.
  * 
- * COMO GERAR VÍDEO DO SOL NO FILMORA COM TRANSPARÊNCIA:
+ * COMO GERAR VÍDEO DA ESTRELA NO FILMORA COM TRANSPARÊNCIA:
  * 
- * 1. Importe os frames PNG do Sol no Filmora (pasta public/sun-frames)
+ * 1. Importe os frames PNG da estrela no Filmora (pasta public/sun-frames)
  * 2. Arraste os frames para a timeline na ordem correta
  * 3. Configure a exportação:
  *    - Formato: MOV (QuickTime)
@@ -43,7 +43,7 @@ const VIDEO_FORMAT = 'mp4';
 const VIDEO_OUTPUT = path.join(__dirname, `../output-sun.${VIDEO_FORMAT}`);
 
 async function generateVideo() {
-  console.log('☀️ Iniciando geração de vídeo do Sol usando frames existentes...');
+  console.log('☀️ Iniciando geração de vídeo da estrela usando frames existentes...');
   
   // Verificar se o diretório de entrada existe
   if (!fs.existsSync(INPUT_DIR)) {

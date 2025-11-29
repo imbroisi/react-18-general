@@ -5,9 +5,9 @@ const { execSync } = require('child_process');
 const http = require('http');
 
 /**
- * INSTRUÇÕES PARA GERAR VÍDEO DO SOL COM FUNDO TRANSPARENTE:
+ * INSTRUÇÕES PARA GERAR VÍDEO DA ESTRELA COM FUNDO TRANSPARENTE:
  * 
- * Para preservar a transparência dos frames PNG do Sol no vídeo final:
+ * Para preservar a transparência dos frames PNG da estrela no vídeo final:
  * 1. Altere VIDEO_FORMAT abaixo para 'mov' (MP4 não suporta transparência)
  * 2. Ao compilar os frames com FFmpeg, use ProRes 4444 para preservar o canal alpha
  * 3. ProRes 4444 preserva o canal alpha (transparência)
@@ -15,16 +15,16 @@ const http = require('http');
  * Exemplo de comando FFmpeg para preservar transparência:
  *   -c:v prores_ks -pix_fmt yuva444p10le -profile:v 4444
  * 
- * Nota: Se os frames PNG do Sol têm fundo transparente, o vídeo MOV gerado
+ * Nota: Se os frames PNG da estrela têm fundo transparente, o vídeo MOV gerado
  * também terá transparência preservada, permitindo composição sobre outros elementos.
  * 
  * IMPORTANTE: O Puppeteer captura exatamente o que o navegador renderiza.
- * Se os frames PNG do Sol têm transparência, ela será preservada no screenshot
+ * Se os frames PNG da estrela têm transparência, ela será preservada no screenshot
  * e as áreas transparentes mostrarão o que está atrás (fundo, outros elementos).
  * 
- * COMO GERAR VÍDEO DO SOL NO FILMORA COM TRANSPARÊNCIA:
+ * COMO GERAR VÍDEO DA ESTRELA NO FILMORA COM TRANSPARÊNCIA:
  * 
- * 1. Importe os frames PNG do Sol no Filmora (pasta public/sun-frames)
+ * 1. Importe os frames PNG da estrela no Filmora (pasta public/sun-frames)
  * 2. Arraste os frames para a timeline na ordem correta
  * 3. Configure a exportação:
  *    - Formato: MOV (QuickTime)
@@ -94,7 +94,8 @@ function parseArgs() {
   const result = {
     duration: DEFAULT_DURATION_SECONDS,
     animationSpeed: ANIMATION_SPEED_VIDEO_DEFAULT, // Usar default se não for especificado
-    doubleFrames: false // Por padrão, não dobrar frames
+    doubleFrames: false, // Por padrão, não dobrar frames
+    star: null // Nome da estrela (opcional)
   };
   
   for (let i = 0; i < args.length; i++) {
@@ -110,43 +111,60 @@ function parseArgs() {
       }
     } else if (args[i] === '--double-frames' || args[i] === '-d') {
       result.doubleFrames = true;
+    } else if ((args[i] === '--star' || args[i] === '-s') && args[i + 1]) {
+      result.star = args[i + 1];
     }
   }
   return result;
 }
 
-const { duration: DURATION_SECONDS, animationSpeed: ANIMATION_SPEED_PARAM, doubleFrames: DOUBLE_FRAMES } = parseArgs();
+const { duration: DURATION_SECONDS, animationSpeed: ANIMATION_SPEED_PARAM, doubleFrames: DOUBLE_FRAMES, star: STAR_NAME } = parseArgs();
 const TOTAL_FRAMES = FPS * DURATION_SECONDS;
 
 // Formato do vídeo de saída. Valores válidos: 'mp4', 'mov', 'avi', 'mkv', 'webm'
 // IMPORTANTE: Para preservar transparência, use 'mov' e ajuste o codec para ProRes 4444
 const VIDEO_FORMAT = 'mp4';
 
-const VIDEO_OUTPUT = path.join(__dirname, `../output.${VIDEO_FORMAT}`);
+// Nome do arquivo de saída: se STAR_NAME foi fornecido, usar "final-with-star-<STAR_NAME>.mp4", senão "output.mp4"
+const outputFileName = STAR_NAME ? `final-with-star-${STAR_NAME}.${VIDEO_FORMAT}` : `output.${VIDEO_FORMAT}`;
+// Diretório de saída: src/FINAL/
+const FINAL_DIR = path.join(__dirname, '../src/FINAL');
+// Criar diretório se não existir
+if (!fs.existsSync(FINAL_DIR)) {
+  fs.mkdirSync(FINAL_DIR, { recursive: true });
+}
+const VIDEO_OUTPUT = path.join(FINAL_DIR, outputFileName);
+console.log(`📁 Nome da estrela recebido: ${STAR_NAME || '(nenhum)'}`);
+console.log(`📁 Arquivo de saída será: ${VIDEO_OUTPUT}`);
 
 // Importar script do vídeo de arquivo separado
-// O arquivo movie-script.ts é compilado para movie-script.js antes de ser usado
-// Se o arquivo .js não existir, tentar compilar o .ts automaticamente
-let VIDEO_SCRIPT_RAW;
+// O arquivo movie-script.ts é sincronizado para movie-script.json pelo sync-movie-script-json.js
+// Garantir que o JSON está sincronizado antes de usar
+const JSON_FILE = path.join(__dirname, '../public/movie-script.json');
+
+// Sincronizar o JSON a partir do TypeScript antes de carregar
 try {
-  // Tentar carregar JavaScript compilado primeiro (mais rápido)
-  VIDEO_SCRIPT_RAW = require('./movie-script.js');
-} catch (e) {
-  // Se não existir, tentar compilar TypeScript
-  try {
-    const { execSync } = require('child_process');
-    console.log('📝 Compilando movie-script.ts para JavaScript...');
-    execSync('npx tsc scripts/movie-script.ts --outDir scripts --module commonjs --target es2020 --esModuleInterop --skipLibCheck', { stdio: 'inherit' });
-    VIDEO_SCRIPT_RAW = require('./movie-script.js');
-  } catch (compileError) {
-    console.error('❌ Erro: Não foi possível compilar ou carregar movie-script.ts');
-    console.error('   Certifique-se de que o TypeScript está instalado: npm install --save-dev typescript');
-    throw compileError;
-  }
+  const { execSync } = require('child_process');
+  execSync('node scripts/sync-movie-script-json.js', { stdio: 'pipe' });
+} catch (syncError) {
+  console.warn('⚠️  Aviso: Não foi possível sincronizar movie-script.json, tentando usar o existente...');
 }
 
-// Se o script foi exportado como default, usar isso; senão tentar named export ou usar diretamente
-const VIDEO_SCRIPT = VIDEO_SCRIPT_RAW.default || VIDEO_SCRIPT_RAW.VIDEO_SCRIPT || VIDEO_SCRIPT_RAW;
+// Carregar o JSON
+let VIDEO_SCRIPT;
+try {
+  if (!fs.existsSync(JSON_FILE)) {
+    throw new Error(`Arquivo ${JSON_FILE} não encontrado. Execute: node scripts/sync-movie-script-json.js`);
+  }
+  const jsonContent = fs.readFileSync(JSON_FILE, 'utf-8');
+  VIDEO_SCRIPT = JSON.parse(jsonContent);
+  console.log(`✅ Script carregado de ${JSON_FILE} (${VIDEO_SCRIPT.length} ações)`);
+} catch (error) {
+  console.error('❌ Erro ao carregar movie-script.json:', error.message);
+  console.error('   Certifique-se de que o arquivo movie-script.ts existe e execute:');
+  console.error('   node scripts/sync-movie-script-json.js');
+  throw error;
+}
 
 // Validar que VIDEO_SCRIPT tem a estrutura esperada
 if (!Array.isArray(VIDEO_SCRIPT)) {
@@ -171,8 +189,8 @@ const CMD_TO_KEY = {
   // Linha QWERTY: q w e r
   'earth': 'q',           // Muda diretamente para Terra
   'rock': 'w',            // Muda diretamente para planeta rochoso
-  'sun': 'e',             // Muda diretamente para Sol
-  'switch planet': 'r',   // Troca entre Terra, planeta rochoso e Sol
+  'star': 'e',            // Muda diretamente para estrela
+  'switch planet': 'r',   // Troca entre Terra, planeta rochoso e estrela
   'toggle distance': 'Escape',  // Toggle: liga/desliga indicação de altura
   'hide instructions': 'Escape', // Liga/desliga painel de instruções (mesma tecla)
   'show instructions': 'Escape', // Liga/desliga painel de instruções (mesma tecla)
@@ -361,6 +379,154 @@ async function generateVideo() {
     });
     await wait(200);
 
+    // Desligar TUDO antes de começar a gravação (incluindo instruções)
+    console.log('🔌 Desligando tudo antes de iniciar a gravação (100% limpo)...');
+    await page.evaluate(() => {
+      window.focus();
+      document.body.focus();
+    });
+    
+    // Esconder TODOS os elementos visíveis via JavaScript diretamente
+    await page.evaluate(() => {
+      // Esconder instruções
+      const instructionsContainer = document.querySelector('.instructions-container');
+      if (instructionsContainer) {
+        instructionsContainer.style.display = 'none';
+      }
+      
+      // Esconder canhão
+      const cannonImage = document.querySelector('.cannon-image');
+      if (cannonImage) {
+        cannonImage.style.display = 'none';
+      }
+      
+      // Esconder indicador de altura (distância)
+      const distanceIndicators = document.querySelectorAll(
+        '.distance-indicator-horizontal-line, .distance-indicator-vertical-line, .distance-indicator-arrow, .distance-indicator-text'
+      );
+      distanceIndicators.forEach(el => {
+        el.style.display = 'none';
+      });
+      
+      // Esconder texto de gravidade
+      const gravityIndicator = document.querySelector('.planet-gravity-indicator');
+      if (gravityIndicator) {
+        gravityIndicator.style.display = 'none';
+      }
+      
+      // Esconder humano (imagem com alt="Humano" ou altura de 40px)
+      const allImages = document.querySelectorAll('img');
+      allImages.forEach(img => {
+        const alt = img.getAttribute('alt') || '';
+        const style = window.getComputedStyle(img);
+        const height = parseInt(style.height) || 0;
+        
+        // Verificar se é o humano: alt="Humano" ou altura de 40px com posição absoluta
+        if (alt.toLowerCase().includes('humano') || 
+            (height === 40 && style.position === 'absolute' && style.left.includes('50%'))) {
+          img.style.display = 'none';
+        }
+      });
+      
+      // Esconder cronômetro e lista de comandos (canto superior direito)
+      // Procurar por divs com posição absoluta no canto superior direito
+      const container = document.querySelector('.container');
+      if (container) {
+        const allDivs = Array.from(container.querySelectorAll('div'));
+        for (const div of allDivs) {
+          const style = window.getComputedStyle(div);
+          if (style.position === 'absolute') {
+            const top = style.top;
+            const right = style.right;
+            const fontFamily = style.fontFamily || '';
+            
+            // Verificar se está no canto superior direito (cronômetro/lista)
+            // Pode estar em '20px' ou valores próximos
+            const topValue = parseInt(top) || 0;
+            const rightValue = parseInt(right) || 0;
+            
+            if (topValue >= 10 && topValue <= 30 && 
+                rightValue >= 10 && rightValue <= 30 &&
+                fontFamily.toLowerCase().includes('monospace')) {
+              div.style.display = 'none';
+            }
+          }
+        }
+      }
+    });
+    
+    // Executar comando "hide all" via tecla 'z' para desligar canhão, balas, etc.
+    await page.keyboard.press('z');
+    await wait(500); // Aguardar o React processar o comando
+    
+    // Garantir que TODOS os elementos de UI permaneçam escondidos após o comando
+    await page.evaluate(() => {
+      // Esconder instruções novamente (caso o comando hide all as tenha ligado)
+      const instructionsContainer = document.querySelector('.instructions-container');
+      if (instructionsContainer) {
+        instructionsContainer.style.display = 'none';
+      }
+      
+      // Esconder canhão novamente
+      const cannonImage = document.querySelector('.cannon-image');
+      if (cannonImage) {
+        cannonImage.style.display = 'none';
+      }
+      
+      // Esconder indicador de altura novamente
+      const distanceIndicators = document.querySelectorAll(
+        '.distance-indicator-horizontal-line, .distance-indicator-vertical-line, .distance-indicator-arrow, .distance-indicator-text'
+      );
+      distanceIndicators.forEach(el => {
+        el.style.display = 'none';
+      });
+      
+      // Esconder texto de gravidade novamente
+      const gravityIndicator = document.querySelector('.planet-gravity-indicator');
+      if (gravityIndicator) {
+        gravityIndicator.style.display = 'none';
+      }
+      
+      // Esconder humano novamente (imagem com alt="Humano" ou altura de 40px)
+      const allImages = document.querySelectorAll('img');
+      allImages.forEach(img => {
+        const alt = img.getAttribute('alt') || '';
+        const style = window.getComputedStyle(img);
+        const height = parseInt(style.height) || 0;
+        
+        // Verificar se é o humano: alt="Humano" ou altura de 40px com posição absoluta
+        if (alt.toLowerCase().includes('humano') || 
+            (height === 40 && style.position === 'absolute' && style.left.includes('50%'))) {
+          img.style.display = 'none';
+        }
+      });
+      
+      // Esconder cronômetro e lista novamente
+      const container = document.querySelector('.container');
+      if (container) {
+        const allDivs = Array.from(container.querySelectorAll('div'));
+        for (const div of allDivs) {
+          const style = window.getComputedStyle(div);
+          if (style.position === 'absolute') {
+            const top = style.top;
+            const right = style.right;
+            const fontFamily = style.fontFamily || '';
+            
+            const topValue = parseInt(top) || 0;
+            const rightValue = parseInt(right) || 0;
+            
+            if (topValue >= 10 && topValue <= 30 && 
+                rightValue >= 10 && rightValue <= 30 &&
+                fontFamily.toLowerCase().includes('monospace')) {
+              div.style.display = 'none';
+            }
+          }
+        }
+      }
+    });
+    
+    await wait(200);
+
     console.log(`📸 Capturando ${TOTAL_FRAMES} frames a ${FPS} FPS...`);
     
     // Preparar script: calcular tempos absolutos em milissegundos
@@ -407,20 +573,36 @@ async function generateVideo() {
           console.log(`⌨️  Frame ${frame} (${(frameTime / 1000).toFixed(2)}s): Pressionando tecla '${action.key}' (comando: ${action.cmd})`);
           
           // Garantir que a página está focada antes de pressionar a tecla
-          await page.evaluate(() => {
-            window.focus();
-            if (document.activeElement && document.activeElement !== document.body) {
-              document.activeElement.blur();
+          try {
+            await page.evaluate(() => {
+              window.focus();
+              if (document.activeElement && document.activeElement !== document.body) {
+                document.activeElement.blur();
+              }
+              document.body.focus();
+            });
+          } catch (e) {
+            if (e.message.includes('Execution context was destroyed')) {
+              console.warn(`⚠️  Contexto de execução destruído ao focar página (frame ${frame}), continuando...`);
+            } else {
+              throw e;
             }
-            document.body.focus();
-          });
+          }
           
           // Pressionar a tecla
-          await page.keyboard.press(action.key);
+          try {
+            await page.keyboard.press(action.key);
+          } catch (e) {
+            if (e.message.includes('Execution context was destroyed')) {
+              console.warn(`⚠️  Contexto de execução destruído ao pressionar tecla (frame ${frame}), continuando...`);
+            } else {
+              throw e;
+            }
+          }
           
           // Aguardar um pouco para garantir que o React processe o evento
           // Aumentar o delay para comandos que mudam o estado do planeta
-          const isPlanetCommand = ['earth', 'rock', 'sun', 'switch planet'].includes(action.cmd);
+          const isPlanetCommand = ['earth', 'rock', 'star', 'switch planet'].includes(action.cmd);
           await wait(isPlanetCommand ? 200 : 50);
           
           nextScriptActionIndex++;
@@ -439,20 +621,41 @@ async function generateVideo() {
       }
       
       // Aguardar um frame do navegador para garantir que a animação atualizou
-      await page.evaluate(() => {
-        return new Promise(resolve => {
-          requestAnimationFrame(resolve);
+      try {
+        await page.evaluate(() => {
+          return new Promise(resolve => {
+            requestAnimationFrame(resolve);
+          });
         });
-      });
+      } catch (e) {
+        if (e.message.includes('Execution context was destroyed')) {
+          console.warn(`⚠️  Contexto de execução destruído ao aguardar frame (frame ${frame}), continuando...`);
+          // Aguardar um pouco antes de continuar
+          await wait(16); // ~1 frame a 60 FPS
+        } else {
+          throw e;
+        }
+      }
       
       // Screenshot captura exatamente o que o navegador renderiza
-      // Se os frames PNG do Sol têm transparência, ela será preservada no screenshot
+      // Se os frames PNG da estrela têm transparência, ela será preservada no screenshot
       // As áreas transparentes mostrarão o que está atrás (fundo, outros elementos)
-      const screenshot = await page.screenshot({
-        type: 'png',
-        fullPage: false,
-        // PNG preserva transparência se existir na renderização do navegador
-      });
+      let screenshot;
+      try {
+        screenshot = await page.screenshot({
+          type: 'png',
+          fullPage: false,
+          // PNG preserva transparência se existir na renderização do navegador
+        });
+      } catch (e) {
+        if (e.message.includes('Execution context was destroyed') || e.message.includes('Target closed')) {
+          console.error(`❌ Erro ao capturar frame ${frame}: ${e.message}`);
+          console.error('   A página pode ter sido fechada ou recarregada. Interrompendo captura...');
+          throw new Error(`Captura interrompida no frame ${frame}: ${e.message}`);
+        } else {
+          throw e;
+        }
+      }
       
       const framePath = path.join(OUTPUT_DIR, `frame-${String(frame).padStart(6, '0')}.png`);
       fs.writeFileSync(framePath, screenshot);
