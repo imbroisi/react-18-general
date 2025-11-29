@@ -219,6 +219,12 @@
   pointer-events: none;
   user-select: none;
   z-index: 10;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.ellipse-info-text.visible {
+  opacity: 1;
 }
 
 .ellipse-info-text p {

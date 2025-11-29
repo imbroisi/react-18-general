@@ -83,7 +83,7 @@ function downloadFile(url, destPath) {
  * Faz o parse dos argumentos de linha de comando.
  *
  * Formato esperado:
- *   node build_all.js [--file|-f <nome-do-arquivo.mp4>] [--url|-u <URL>] [--double-frames|-d] [--duration|-t <segundos>] [--help|-h]
+ *   node build_all.js [--star|-s <nome-do-arquivo.mp4>] [--url|-u <URL>] [--double-frames|-d] [--duration|-t <segundos>] [--help|-h]
  */
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -104,14 +104,14 @@ function parseArgs() {
       result.help = true;
     } else if (arg === "--double-frames" || arg === "-d") {
       result.doubleFrames = true;
-    } else if (arg === "--file" || arg === "-f") {
+    } else if (arg === "--star" || arg === "-s") {
       const next = args[i + 1];
       if (next && !next.startsWith("-")) {
         result.fileName = next;
         i++; // consumir o valor
       } else {
         console.error(
-          'Erro: o parâmetro --file/-f requer um valor (ex.: --file "meu-video.mp4").'
+          'Erro: o parâmetro --star/-s requer um valor (ex.: --star "meu-video.mp4").'
         );
         result.help = true;
         break;
@@ -232,12 +232,45 @@ function showProcessingSummary(startTime) {
 }
 
 /**
+ * Sincroniza o movie-script.ts com movie-script.json
+ * Isso garante que o browser tenha a versão mais recente do script
+ */
+function syncMovieScript() {
+  const syncScript = path.join(
+    __dirname,
+    "scripts",
+    "sync-movie-script-json.js"
+  );
+
+  if (!fs.existsSync(syncScript)) {
+    console.warn(
+      `Aviso: script sync-movie-script-json.js não encontrado em ${syncScript}.`
+    );
+    return;
+  }
+
+  console.log("Sincronizando movie-script.ts com movie-script.json...");
+  try {
+    execSync(`node "${syncScript}"`, { stdio: 'inherit' });
+    console.log("✅ Script sincronizado com sucesso!");
+  } catch (err) {
+    console.warn(
+      `Aviso: Erro ao sincronizar script: ${err.message}`
+    );
+    console.warn("   Continuando mesmo assim...");
+  }
+}
+
+/**
  * Executa o script de geração de vídeo final (generate-video.js),
  * que usa o Puppeteer + FFmpeg para capturar o app React em execução.
  * @param {number|null} durationSeconds - Duração do vídeo em segundos (opcional)
  * @param {number|null} animationSpeed - Velocidade de animação (ANIMATION_SPEED) para o gerador (opcional)
  */
 function runGenerateVideo(durationSeconds = null, animationSpeed = null) {
+  // Sincronizar o script antes de gerar o vídeo
+  syncMovieScript();
+
   const generateScript = path.join(
     __dirname,
     "scripts",
@@ -382,7 +415,7 @@ async function main() {
     );
     console.log("");
     console.log(
-      "  node build_all.js --file <nome-do-arquivo.mp4>"
+      "  node build_all.js --star <nome-do-arquivo.mp4>"
     );
     console.log(
       "    Baixa o vídeo da web (substituindo qualquer arquivo existente em src/video-element-src),"
@@ -399,7 +432,7 @@ async function main() {
     console.log("");
     console.log("Parâmetros opcionais:");
     console.log(
-      "  --file, -f <nome>      Define o nome do arquivo local a ser salvo/baixado (S3)."
+      "  --star, -s <nome>      Define o nome do arquivo da estrela a ser baixado de S3."
     );
     console.log(
       "  --double-frames, -d    Dobra a quantidade de frames gerados, criando frames intermediários"

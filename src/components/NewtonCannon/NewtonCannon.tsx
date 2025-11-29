@@ -6,6 +6,9 @@ import balaImage from '../../images/bala.png';
 import humanImage from '../../images/human.png';
 import './NewtonCannon.css';
 
+// Importar movie-script (mesmo arquivo usado para geração de vídeo e browser)
+// Será carregado dinamicamente via fetch
+
 const CANNON_HEIGHT = 80;
 const HUMAN_HEIGHT = 40; // Altura do humano em pixels
 const CANNON_MOUTH_OFFSET_PX = 40; // Ajuste fino vertical da boca do canhão (pode ser ajustado para alinhar a órbita no Sol)
@@ -180,19 +183,20 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const [bullets, setBullets] = useState<BulletState[]>([]);
   const [cannonWidth, setCannonWidth] = useState<number>(0);
   const [selectedVelocity, setSelectedVelocity] = useState<number | null>(null);
-  const [showDistanceIndicator, setShowDistanceIndicator] = useState<boolean>(true);
-  const [showGravity, setShowGravity] = useState<boolean>(true); // Visibilidade do texto de gravidade
+  const [showDistanceIndicator, setShowDistanceIndicator] = useState<boolean>(false);
+  const [showGravity, setShowGravity] = useState<boolean>(false); // Visibilidade do texto de gravidade
   const [showInstructions, setShowInstructions] = useState<boolean>(true);
-  const [showCannon, setShowCannon] = useState<boolean>(true);
+  const [showCannon, setShowCannon] = useState<boolean>(false);
   const [useRockPlanet, setUseRockPlanet] = useState<boolean>(false);
-  const [showSun, setShowSun] = useState<boolean>(true); // Sol aparece automaticamente
+  const [showSun, setShowSun] = useState<boolean>(false); // Sol desligado inicialmente
+  const [showPlanet, setShowPlanet] = useState<boolean>(false); // Planeta desligado inicialmente
   const [planetSize, setPlanetSize] = useState<number>(100); // Tamanho do planeta em percentagem (100% = tamanho original)
   const [targetPlanetSize, setTargetPlanetSize] = useState<number>(100); // Tamanho alvo do planeta para animação (apenas para tecla "-")
   const [humanRotation, setHumanRotation] = useState<number>(0); // Rotação do humano em graus (0 = em pé, -90 = deitado)
   const [humanPosition, setHumanPosition] = useState<'top' | 'surface'>('top'); // Posição do humano: 'top' = linha tracejada, 'surface' = superfície atual
   const [humanY, setHumanY] = useState<number>(-EARTH_RADIUS_PX); // Posição Y atual do humano (topo = negativo)
   const [targetHumanY, setTargetHumanY] = useState<number>(-EARTH_RADIUS_PX); // Posição Y alvo do humano para animação (topo = negativo)
-  const [showHuman, setShowHuman] = useState<boolean>(true); // Visibilidade do humano
+  const [showHuman, setShowHuman] = useState<boolean>(false); // Visibilidade do humano (desligado inicialmente)
   const [sunFrameIndex, setSunFrameIndex] = useState<number>(1); // Índice do frame atual do Sol
   const [showSatellite, setShowSatellite] = useState<boolean>(false); // Mostrar/esconder satélite de teste (tecla 't')
   const [satelliteAngle, setSatelliteAngle] = useState<number>(0); // Ângulo do satélite em radianos
@@ -200,6 +204,17 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   const [ellipticalOrbitAngle, setEllipticalOrbitAngle] = useState<number>(0); // Ângulo da órbita elíptica em radianos
   const [showEllipseVelocities, setShowEllipseVelocities] = useState<boolean>(false); // Mostrar/esconder velocidades na órbita elíptica (tecla 'u')
   const [showEllipseOutline, setShowEllipseOutline] = useState<boolean>(false); // Mostrar/esconder linha tracejada da elipse (controlada junto com 'u')
+  const [isScriptRunning, setIsScriptRunning] = useState<boolean>(false); // Controla se o movie-script está executando
+  const [elapsedTime, setElapsedTime] = useState<number>(0); // Tempo decorrido em segundos
+  const [currentCommandIndex, setCurrentCommandIndex] = useState<number>(-1); // Índice do comando sendo executado (-1 = nenhum)
+  const [executedCommands, setExecutedCommands] = useState<Set<number>>(new Set()); // Índices dos comandos já executados
+  const [scriptLoaded, setScriptLoaded] = useState<boolean>(false); // Indica se o script foi carregado
+  const movieScriptRef = useRef<Array<{ wait: number; cmd: string }>>([]); // Script carregado
+  const scriptTimeoutsRef = useRef<Array<number | NodeJS.Timeout>>([]); // Refs para armazenar todos os timeouts/animation frames do script
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref para o intervalo do cronômetro
+  const scriptStartTimeRef = useRef<number>(0); // Tempo de início do script
+  const isScriptRunningRef = useRef<boolean>(false); // Ref para verificar se o script está rodando
+  const scriptAnimationFrameRef = useRef<number | null>(null); // Ref para o animation frame do script
   const humanYRef = useRef<number>(0);
   const previousPlanetSizeRef = useRef<number>(planetSize);
   const sunFrameIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -345,6 +360,40 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     };
   }, [showSun, showEllipticalOrbit]);
 
+  // Carregar movie-script ao montar o componente
+  useEffect(() => {
+    const loadMovieScript = async () => {
+      try {
+        // Adicionar timestamp para evitar cache
+        const response = await fetch(`/movie-script.json?t=${Date.now()}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const script = await response.json();
+        movieScriptRef.current = script;
+        setScriptLoaded(true);
+        console.log('✅ movie-script carregado:', script);
+      } catch (error) {
+        console.error('❌ Erro ao carregar movie-script:', error);
+        // Fallback: usar script hardcoded
+        movieScriptRef.current = [
+          { wait: 0, cmd: 'hide all' },
+          { wait: 0.1, cmd: 'toggle cannon' },
+          { wait: 0.5, cmd: 'fire orbital' },
+          { wait: 15, cmd: 'switch planet' },
+          { wait: 6, cmd: 'shrink planet' },
+          { wait: 10, cmd: 'shrink planet' },
+          { wait: 5, cmd: 'shrink planet' },
+          { wait: 5, cmd: 'shrink planet' },
+          { wait: 5, cmd: 'shrink planet' }, 
+        ];
+        setScriptLoaded(true);
+        console.warn('⚠️  Usando script fallback');
+      }
+    };
+    loadMovieScript();
+  }, []);
+
   const handleFire = useCallback((velocity: number, key?: string) => {
     // Usar a ref para garantir que temos o valor mais atualizado
     const currentCannonWidth = cannonRef.current?.offsetWidth || cannonWidthRef.current || cannonWidth;
@@ -399,6 +448,351 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     setBullets(prev => [...prev, newBullet]);
   }, [cannonWidth, showSun, initialY]);
 
+  // Função para executar um comando do browser-script
+  const executeCommand = useCallback((cmd: string) => {
+    const normalizedCmd = cmd.toLowerCase().trim();
+    console.log(`🔧 executeCommand chamado com: "${cmd}" -> normalizado: "${normalizedCmd}"`);
+    
+    switch (normalizedCmd) {
+      // Controle geral
+      case 'hide all':
+        setShowCannon(false);
+        setShowDistanceIndicator(false);
+        setShowInstructions(false);
+        setShowHuman(false);
+        setShowGravity(false);
+        setShowPlanet(false);
+        setShowSun(false);
+        setSelectedVelocity(null);
+        setBullets([]);
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+        isAnimatingRef.current = false;
+        break;
+      case 'toggle cannon':
+        setShowCannon(prev => !prev);
+        if (showCannon) {
+          setSelectedVelocity(null);
+          setBullets(prev => prev.filter(bullet => bullet.isActive));
+        }
+        break;
+      case 'switch planet':
+        if (showSun) {
+          setShowSun(false);
+          setUseRockPlanet(false);
+          setPlanetSize(100);
+          setShowPlanet(true);
+        } else if (useRockPlanet) {
+          setShowSun(true);
+          setUseRockPlanet(false);
+          setPlanetSize(100);
+          setShowPlanet(true);
+        } else {
+          setShowSun(false);
+          setUseRockPlanet(true);
+          setPlanetSize(ROCK_PLANET_DIMENSION);
+          setShowPlanet(true);
+        }
+        setBullets([]);
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+        break;
+      case 'earth':
+        console.log('🌍 Executando comando: earth');
+        setShowSun(false);
+        setUseRockPlanet(false);
+        setPlanetSize(100);
+        setShowPlanet(true);
+        setBullets([]);
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+        break;
+      case 'rock':
+        setShowSun(false);
+        setUseRockPlanet(true);
+        setPlanetSize(ROCK_PLANET_DIMENSION);
+        setShowPlanet(true);
+        setBullets([]);
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+        break;
+      case 'sun':
+        setShowSun(true);
+        setUseRockPlanet(false);
+        setPlanetSize(100);
+        setShowPlanet(true);
+        setBullets([]);
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+        break;
+      case 'toggle distance':
+        setShowDistanceIndicator(prev => !prev);
+        break;
+      case 'hide instructions':
+        setShowInstructions(false);
+        break;
+      case 'show instructions':
+        setShowInstructions(true);
+        break;
+      // Disparo
+      case 'fire 1':
+      case 'fire 2':
+      case 'fire 3':
+      case 'fire 4':
+      case 'fire 5':
+      case 'fire 6':
+        const fireKey = normalizedCmd.split(' ')[1];
+        const velocityByKey = getVelocityByKey(showSun);
+        if (fireKey in velocityByKey) {
+          const velocity = velocityByKey[fireKey];
+          setSelectedVelocity(null);
+          setTimeout(() => {
+            setSelectedVelocity(velocity);
+          }, VELOCITY_DISPLAY_DELAY);
+          if (fireTimeoutRef.current) {
+            clearTimeout(fireTimeoutRef.current);
+          }
+          fireTimeoutRef.current = setTimeout(() => {
+            handleFire(velocity, fireKey);
+            fireTimeoutRef.current = null;
+          }, FIRE_DELAY);
+        }
+        break;
+      case 'fire orbital':
+        const orbitalKey = '7';
+        const orbitalVelocity = getVelocityByKey(showSun)[orbitalKey];
+        setSelectedVelocity(null);
+        setTimeout(() => {
+          setSelectedVelocity(orbitalVelocity);
+        }, VELOCITY_DISPLAY_DELAY);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+        }
+        fireTimeoutRef.current = setTimeout(() => {
+          handleFire(orbitalVelocity, orbitalKey);
+          fireTimeoutRef.current = null;
+        }, FIRE_DELAY);
+        break;
+      case 'fire escape':
+        const escapeKey = '9';
+        const escapeVelocity = getVelocityByKey(showSun)[escapeKey];
+        setSelectedVelocity(null);
+        setTimeout(() => {
+          setSelectedVelocity(escapeVelocity);
+        }, VELOCITY_DISPLAY_DELAY);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+        }
+        fireTimeoutRef.current = setTimeout(() => {
+          handleFire(escapeVelocity, escapeKey);
+          fireTimeoutRef.current = null;
+        }, FIRE_DELAY);
+        break;
+      case 'cancel fire':
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+        break;
+      // Tamanho do planeta
+      case 'shrink planet':
+        setTargetPlanetSize(prev => {
+          const newSize = prev * 0.5;
+          return Math.max(newSize, 1.5);
+        });
+        break;
+      case 'grow planet':
+        setTargetPlanetSize(100);
+        break;
+      // Humano
+      case 'hide human':
+        setShowHuman(false);
+        break;
+      case 'show human':
+        setShowHuman(true);
+        break;
+      case 'kill human':
+        setShowHuman(false);
+        break;
+      case 'move human down':
+        if (humanPosition === 'top') {
+          setHumanPosition('surface');
+          const currentSurfaceY = -EARTH_RADIUS_PX * (planetSize / 100);
+          setTargetHumanY(currentSurfaceY);
+        } else {
+          setHumanPosition('top');
+          setTargetHumanY(-EARTH_RADIUS_PX);
+        }
+        break;
+      default:
+        console.warn(`⚠️  Comando desconhecido: "${cmd}"`);
+    }
+  }, [showSun, useRockPlanet, showCannon, humanPosition, planetSize, handleFire]);
+
+  // Função para executar o movie-script (mesmo script usado para geração de vídeo)
+  const executeBrowserScript = useCallback(() => {
+    // Se já estiver rodando, não fazer nada
+    if (isScriptRunning) {
+      return;
+    }
+
+    const script = movieScriptRef.current;
+    if (script.length === 0) {
+      console.warn('⚠️  movie-script está vazio ou não foi carregado');
+      return;
+    }
+
+    console.log('▶️  Iniciando execução do script:', script);
+    setIsScriptRunning(true);
+    isScriptRunningRef.current = true;
+    setElapsedTime(0);
+    setCurrentCommandIndex(-1);
+    setExecutedCommands(new Set());
+    const startTime = Date.now();
+    scriptStartTimeRef.current = startTime;
+    
+    // Limpar timeouts anteriores se houver
+    scriptTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+    scriptTimeoutsRef.current = [];
+    
+    // Calcular tempos absolutos para cada tecla (em milissegundos)
+    // O wait no script é relativo (tempo após o comando anterior)
+    // Precisamos converter para tempo absoluto acumulando os waits
+    let accumulatedTime = 0;
+    const commandTimes: Array<{ index: number; timeMs: number; cmd: string }> = [];
+    
+    for (let i = 0; i < script.length; i++) {
+      // Acumular o wait deste comando para obter o tempo absoluto
+      accumulatedTime += script[i].wait * 1000; // Converter para milissegundos
+      // O tempo de pressionar esta tecla é o tempo absoluto acumulado
+      commandTimes.push({
+        index: i,
+        timeMs: accumulatedTime,
+        cmd: script[i].cmd
+      });
+    }
+    
+    // Usar requestAnimationFrame para verificar continuamente o tempo decorrido
+    const executedIndices = new Set<number>();
+    
+    const checkAndExecute = () => {
+      if (!isScriptRunningRef.current) {
+        scriptAnimationFrameRef.current = null;
+        return;
+      }
+      
+      const elapsedMs = Date.now() - startTime;
+      
+      // Verificar cada comando que ainda não foi executado
+      for (const { index, timeMs, cmd } of commandTimes) {
+        if (!executedIndices.has(index) && elapsedMs >= timeMs) {
+          console.log(`▶️  Executando comando: "${cmd}" aos ${timeMs / 1000}s (tempo real: ${elapsedMs / 1000}s)`);
+          
+          // Marcar comando como sendo executado
+          setCurrentCommandIndex(index);
+          
+          // Executar o comando
+          executeCommand(cmd);
+          
+          // Marcar comando como executado
+          executedIndices.add(index);
+          setExecutedCommands(prev => {
+            const newSet = new Set(prev);
+            newSet.add(index);
+            return newSet;
+          });
+          
+          // Se for o último comando, finalizar após um pequeno delay
+          if (index === script.length - 1) {
+            console.log('✅ Script concluído');
+            setTimeout(() => {
+              setIsScriptRunning(false);
+              isScriptRunningRef.current = false;
+              setCurrentCommandIndex(-1);
+              if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+              }
+            }, 100);
+            scriptAnimationFrameRef.current = null;
+            return;
+          }
+          // O comando atual permanece destacado até que o próximo seja executado
+        }
+      }
+      
+      // Continuar verificando
+      scriptAnimationFrameRef.current = requestAnimationFrame(checkAndExecute);
+    };
+    
+    // Iniciar a verificação
+    scriptAnimationFrameRef.current = requestAnimationFrame(checkAndExecute);
+    
+    // Marcar o primeiro comando como atual imediatamente
+    if (script.length > 0) {
+      setCurrentCommandIndex(0);
+    }
+  }, [isScriptRunning, executeCommand]);
+
+  // Cronômetro que atualiza a cada segundo
+  useEffect(() => {
+    if (isScriptRunning) {
+      timerIntervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - scriptStartTimeRef.current) / 1000);
+        setElapsedTime(elapsed);
+      }, 1000);
+    } else {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
+  }, [isScriptRunning]);
+
+  // Limpar timeouts ao desmontar
+  useEffect(() => {
+    return () => {
+      scriptTimeoutsRef.current.forEach(item => {
+        if (typeof item === 'number') {
+          cancelAnimationFrame(item);
+        } else {
+          clearTimeout(item);
+        }
+      });
+      scriptTimeoutsRef.current = [];
+      if (scriptAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(scriptAnimationFrameRef.current);
+        scriptAnimationFrameRef.current = null;
+      }
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
+  }, []);
+
   // Listener para teclas numéricas selecionar velocidade e disparar após FIRE_DELAY
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -451,9 +845,14 @@ const NewtonCannon = (props: NewtonCannonProps) => {
   }, [handleFire]);
 
   // Listener para tecla "Espaço" esconder/mostrar indicação de distância, "Esc" para instruções,
-  // "g" para ligar/desligar texto de gravidade, "x" para limpar, "t/y" para satélites
+  // "g" para ligar/desligar texto de gravidade, "x" para limpar, "t/y" para satélites, "Enter" para executar script
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        executeBrowserScript();
+        return;
+      }
       if (event.key === ' ') {
         event.preventDefault(); // Prevenir scroll da página
         setShowDistanceIndicator(prev => !prev);
@@ -512,6 +911,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         setShowSun(false);
         setUseRockPlanet(false);
         setPlanetSize(100);
+        setShowPlanet(true);
         setBullets([]);
         setSelectedVelocity(null);
         if (fireTimeoutRef.current) {
@@ -524,6 +924,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         setShowSun(false);
         setUseRockPlanet(true);
         setPlanetSize(ROCK_PLANET_DIMENSION);
+        setShowPlanet(true);
         setBullets([]);
         setSelectedVelocity(null);
         if (fireTimeoutRef.current) {
@@ -536,6 +937,32 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         setShowSun(true);
         setUseRockPlanet(false);
         setPlanetSize(100);
+        setShowPlanet(true);
+        setBullets([]);
+        setSelectedVelocity(null);
+        if (fireTimeoutRef.current) {
+          clearTimeout(fireTimeoutRef.current);
+          fireTimeoutRef.current = null;
+        }
+      }
+      if (event.key === 'r' || event.key === 'R') {
+        // Trocar entre Terra, planeta rochoso e Sol
+        if (showSun) {
+          setShowSun(false);
+          setUseRockPlanet(false);
+          setPlanetSize(100);
+          setShowPlanet(true);
+        } else if (useRockPlanet) {
+          setShowSun(true);
+          setUseRockPlanet(false);
+          setPlanetSize(100);
+          setShowPlanet(true);
+        } else {
+          setShowSun(false);
+          setUseRockPlanet(true);
+          setPlanetSize(ROCK_PLANET_DIMENSION);
+          setShowPlanet(true);
+        }
         setBullets([]);
         setSelectedVelocity(null);
         if (fireTimeoutRef.current) {
@@ -578,12 +1005,13 @@ const NewtonCannon = (props: NewtonCannonProps) => {
         setShowHuman(prev => !prev);
       }
       if (event.key === 'z' || event.key === 'Z') {
-        // Toggle: desligar/ligar tudo, exceto planeta/Sol, indicador de gravidade e círculo tracejado
+        // Toggle: desligar/ligar tudo, exceto planeta/Sol e círculo tracejado
         const allOff =
           !showCannon &&
           !showDistanceIndicator &&
           !showInstructions &&
-          !showHuman;
+          !showHuman &&
+          !showGravity;
 
         if (allOff) {
           // Reativar elementos principais
@@ -591,12 +1019,15 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           setShowDistanceIndicator(true);
           setShowInstructions(true);
           setShowHuman(true);
+          setShowGravity(true);
+          // Não reativar planeta automaticamente - deixar como está
         } else {
           // Desligar tudo
           setShowCannon(false);
           setShowDistanceIndicator(false);
           setShowInstructions(false);
           setShowHuman(false);
+          setShowGravity(false);
           setSelectedVelocity(null);
           // Remover todas as balas (incluindo as que estão orbitando)
           setBullets([]);
@@ -606,6 +1037,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
             animationFrameRef.current = null;
           }
           isAnimatingRef.current = false;
+          // Não desligar planeta/Sol - manter como está
         }
       }
     };
@@ -614,7 +1046,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [showCannon, humanPosition, planetSize, showDistanceIndicator, showInstructions, showHuman]);
+  }, [showCannon, humanPosition, planetSize, showDistanceIndicator, showInstructions, showHuman, showGravity, showSun, useRockPlanet, executeBrowserScript]);
 
   // Inicializar posição Y do humano na linha tracejada (superfície a 100%)
   useEffect(() => {
@@ -911,8 +1343,95 @@ const NewtonCannon = (props: NewtonCannonProps) => {
     return `${day} de ${monthNames[month - 1]}`;
   };
 
+  // Formatar tempo para exibição (apenas segundos)
+  const formatTime = (seconds: number): string => {
+    return String(seconds);
+  };
+
+  // Calcular o tempo acumulado de cada comando
+  // Calcular o tempo absoluto quando cada tecla será pressionada
+  // O wait no script é relativo (tempo após o comando anterior)
+  // Precisamos converter para tempo absoluto acumulando os waits
+  const getCommandExecutionTime = (index: number): number => {
+    let accumulatedTime = 0;
+    // Acumular os waits até o índice atual para obter o tempo absoluto
+    for (let i = 0; i <= index; i++) {
+      accumulatedTime += movieScriptRef.current[i]?.wait || 0;
+    }
+    return Math.floor(accumulatedTime);
+  };
+
   return (
     <div className="container">
+      {/* Cronômetro e lista de comandos no canto superior direito */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          zIndex: 1001,
+          fontFamily: 'monospace',
+          color: '#ffffff'
+        }}
+      >
+        {/* Cronômetro */}
+        <div
+          style={{
+            fontSize: '24px',
+            fontWeight: 'bold',
+            marginBottom: '10px',
+            textAlign: 'left'
+          }}
+        >
+          {formatTime(elapsedTime)}
+        </div>
+        
+        {/* Lista de comandos */}
+        {scriptLoaded && movieScriptRef.current.length > 0 && (
+        <div
+          style={{
+            fontSize: '12px',
+            lineHeight: '1.6'
+          }}
+        >
+          {movieScriptRef.current.map((action, index) => {
+            const isCurrent = currentCommandIndex === index;
+            const isExecuted = executedCommands.has(index);
+            const executionTime = getCommandExecutionTime(index);
+            
+            let color = '#cccccc'; // Comandos ainda não executados
+            let fontWeight: 'normal' | 'bold' = 'normal';
+            
+            if (isCurrent) {
+              color = '#ffffff';
+              fontWeight = 'bold';
+            } else if (isExecuted) {
+              color = '#aaaaaa'; // Comandos já executados
+              fontWeight = 'normal';
+            }
+            
+            return (
+              <div
+                key={index}
+                style={{
+                  color,
+                  fontWeight,
+                  marginBottom: '2px',
+                  display: 'flex',
+                  alignItems: 'baseline'
+                }}
+              >
+                <span style={{ display: 'inline-block', width: '35px', textAlign: 'right', marginRight: '5px' }}>
+                  {executionTime}s:
+                </span>
+                <span>{action.cmd}</span>
+              </div>
+            );
+          })}
+        </div>
+        )}
+      </div>
+      
       {/* Tabela de instruções na extrema esquerda */}
       {showInstructions && (
         <div className="instructions-container" style={{ fontSize: `${FONT_SIZE - 2}px` }}>
@@ -997,7 +1516,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
               {/* Linha ZXCV (Z X C V B N M) */}
               <tr>
                 <td>z</td>
-                <td>liga/desliga tudo (exceto planeta, gravidade e círculo)</td>
+                <td>liga/desliga tudo (exceto planeta e círculo)</td>
               </tr>
               <tr>
                 <td>x</td>
@@ -1044,11 +1563,15 @@ const NewtonCannon = (props: NewtonCannonProps) => {
               left: '50%',
               top: '50%',
               transform: 'translate(-50%, -50%)',
-              // Circunferência de referência 50px menor que o diâmetro base:
-              // - Para a Terra: EARTH_DIAMETER - 50
-              // - Para o Sol: diâmetro visual em 100% (com fator 0.8) - 50
-              width: `${(showSun ? (EARTH_DIAMETER + 80) * 0.8 : EARTH_DIAMETER) - 50}px`,
-              height: `${(showSun ? (EARTH_DIAMETER + 80) * 0.8 : EARTH_DIAMETER) - 50}px`,
+              // Circunferência de referência exatamente sobre a superfície:
+              // - Para a Terra/rochoso: EARTH_DIAMETER (fixo, não acompanha mudança de tamanho)
+              // - Para o Sol: diâmetro visual em 100% (com fator 0.8) - 50 (fixo)
+              width: `${showSun 
+                ? (EARTH_DIAMETER + 80) * 0.8 - 50 
+                : EARTH_DIAMETER}px`,
+              height: `${showSun 
+                ? (EARTH_DIAMETER + 80) * 0.8 - 50 
+                : EARTH_DIAMETER}px`,
               zIndex: 5
             }}
           />
@@ -1103,7 +1626,7 @@ const NewtonCannon = (props: NewtonCannonProps) => {
           )}
         </div>
       )}
-      {!showSun && (
+      {!showSun && showPlanet && (
         <div className="earth-wrapper">
           <img 
             src={useRockPlanet ? planetaRochosoImage : terraImage} 
@@ -1186,14 +1709,12 @@ const NewtonCannon = (props: NewtonCannonProps) => {
       {showSun && showEllipticalOrbit && (
         <>
           {/* Textos explicativos no canto superior esquerdo (ligados ao toggle da tecla 'u') */}
-          {showEllipseVelocities && (
-            <div className="ellipse-info-text">
-              <p>A representação da elipse está fora de proporção, para fins de melhor entendimento do fenômeno. A elipse real tem excentricidade bem menor.</p>
-              <p>Idem para a proporção e a distância Terra - Sol.</p>
-              <p>Idem para a velocidade da animação. Na vida real, uma volta inteira da Terra demora 1 ano.</p>
-              <p>As velocidades e datas escritas são reais.</p>
-            </div>
-          )}
+          <div className={`ellipse-info-text ${showEllipseVelocities ? 'visible' : ''}`}>
+            <p>A representação da elipse está fora de proporção, para fins de melhor entendimento do fenômeno. A elipse real tem excentricidade bem menor.</p>
+            <p>Idem para a proporção e a distância Terra - Sol.</p>
+            <p>Idem para a velocidade da animação. Na vida real, uma volta inteira da Terra demora 1 ano.</p>
+            <p>As velocidades e datas escritas são reais.</p>
+          </div>
           {(() => {
             // Raio visual do Sol em pixels
             const sunVisualDiameterPx = (EARTH_DIAMETER + 80) * 0.8 * (planetSize / 100);

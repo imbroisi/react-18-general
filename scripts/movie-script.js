@@ -13,12 +13,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VIDEO_SCRIPT = void 0;
 const VIDEO_SCRIPT = [
-    { wait: 0, cmd: 'hide all' },
-    { wait: 0.1, cmd: 'toggle cannon' },
+    { wait: 0.2, cmd: 'earth' },
+    { wait: 0.3, cmd: 'toggle cannon' },
     { wait: 0.5, cmd: 'fire orbital' },
     { wait: 15, cmd: 'switch planet' },
     { wait: 6, cmd: 'shrink planet' },
-    { wait: 10, cmd: 'shrink planet' },
+    { wait: 10, cmd: 'earth' },
     { wait: 5, cmd: 'shrink planet' },
     { wait: 5, cmd: 'shrink planet' },
     { wait: 5, cmd: 'shrink planet' },

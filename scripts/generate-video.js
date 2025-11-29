@@ -47,12 +47,54 @@ const ANIMATION_SPEED_VIDEO_DEFAULT = 100;
 const APP_URL = 'http://localhost:3000'; // URL da aplicação React
 const RESOLUTION = '1920x1080'; // Resolução do vídeo (1080p)
 
+// Função para exibir ajuda
+function showHelp() {
+  const VIDEO_FORMAT_HELP = 'mp4'; // Valor padrão do formato
+  console.log(`
+Uso: node scripts/generate-video.js [opções]
+
+Opções:
+  --duration, -t <segundos>     Duração do vídeo em segundos
+                                  Padrão: ${DEFAULT_DURATION_SECONDS} segundos (~${Math.floor(DEFAULT_DURATION_SECONDS / 60)} minutos)
+
+  --animation-speed, -a <valor>  Velocidade de animação para geração do vídeo
+                                  Padrão: ${ANIMATION_SPEED_VIDEO_DEFAULT}
+
+  --double-frames, -d             Dobra a quantidade de frames gerados, criando frames intermediários
+                                  (usa FFmpeg/minterpolate após a geração dos frames PNG)
+
+  --help, -h                      Exibe esta mensagem de ajuda
+
+Exemplos:
+  node scripts/generate-video.js
+  node scripts/generate-video.js --duration 120
+  node scripts/generate-video.js --animation-speed 50
+  node scripts/generate-video.js -t 120 -a 50
+  node scripts/generate-video.js --double-frames
+  node scripts/generate-video.js -d -t 120
+
+Configurações fixas:
+  FPS: ${FPS} frames por segundo
+  Resolução: ${RESOLUTION}
+  Formato: ${VIDEO_FORMAT_HELP}
+  URL da aplicação: ${APP_URL}
+`);
+}
+
 // Parsear argumentos de linha de comando
 function parseArgs() {
   const args = process.argv.slice(2);
+  
+  // Verificar se foi solicitada ajuda
+  if (args.includes('--help') || args.includes('-h')) {
+    showHelp();
+    process.exit(0);
+  }
+  
   const result = {
     duration: DEFAULT_DURATION_SECONDS,
-    animationSpeed: ANIMATION_SPEED_VIDEO_DEFAULT // Usar default se não for especificado
+    animationSpeed: ANIMATION_SPEED_VIDEO_DEFAULT, // Usar default se não for especificado
+    doubleFrames: false // Por padrão, não dobrar frames
   };
   
   for (let i = 0; i < args.length; i++) {
@@ -66,12 +108,14 @@ function parseArgs() {
       if (!isNaN(speed) && speed > 0) {
         result.animationSpeed = speed;
       }
+    } else if (args[i] === '--double-frames' || args[i] === '-d') {
+      result.doubleFrames = true;
     }
   }
   return result;
 }
 
-const { duration: DURATION_SECONDS, animationSpeed: ANIMATION_SPEED_PARAM } = parseArgs();
+const { duration: DURATION_SECONDS, animationSpeed: ANIMATION_SPEED_PARAM, doubleFrames: DOUBLE_FRAMES } = parseArgs();
 const TOTAL_FRAMES = FPS * DURATION_SECONDS;
 
 // Formato do vídeo de saída. Valores válidos: 'mp4', 'mov', 'avi', 'mkv', 'webm'
@@ -118,39 +162,41 @@ for (let i = 0; i < VIDEO_SCRIPT.length; i++) {
 }
 
 // Mapeamento de comandos legíveis para teclas
+// Mapeamento completo de todos os comandos do movie-script.ts para teclas
+// IMPORTANTE: Todos os comandos definidos em VideoCommand devem estar aqui
 const CMD_TO_KEY = {
-  // Controle geral
+  // === Controle Geral ===
   'hide all': 'z',
   'toggle cannon': 'x',
   // Linha QWERTY: q w e r
-  'earth': 'q',
-  'rock': 'w',
-  'sun': 'e',
-  'switch planet': 'r',
-  'toggle distance': 'Escape',
-  'hide instructions': ' ',
-  'show instructions': ' ',
+  'earth': 'q',           // Muda diretamente para Terra
+  'rock': 'w',            // Muda diretamente para planeta rochoso
+  'sun': 'e',             // Muda diretamente para Sol
+  'switch planet': 'r',   // Troca entre Terra, planeta rochoso e Sol
+  'toggle distance': 'Escape',  // Toggle: liga/desliga indicação de altura
+  'hide instructions': 'Escape', // Liga/desliga painel de instruções (mesma tecla)
+  'show instructions': 'Escape', // Liga/desliga painel de instruções (mesma tecla)
   
-  // Disparo
+  // === Disparo ===
   'fire 1': '1',
   'fire 2': '2',
   'fire 3': '3',
   'fire 4': '4',
   'fire 5': '5',
   'fire 6': '6',
-  'fire escape': '9',
-  'fire orbital': '7',
-  'cancel fire': '0',
+  'fire orbital': '7',    // Velocidade orbital
+  'fire escape': '9',     // Velocidade de escape
+  'cancel fire': '0',     // Cancela disparo agendado
   
-  // Tamanho do planeta
-  'shrink planet': '-',
-  'grow planet': '+',
+  // === Tamanho do Planeta ===
+  'shrink planet': '-',   // Diminui o tamanho do planeta em 50%
+  'grow planet': '+',    // Volta o tamanho do planeta para 100%
   
-  // Humano
-  'hide human': 'a',
-  'show human': 'a',
-  'kill human': 's',
-  'move human down': 'ArrowDown',
+  // === Humano ===
+  'hide human': 'a',      // Liga/desliga humano (toggle)
+  'show human': 'a',      // Liga/desliga humano (toggle - mesma tecla)
+  'kill human': 's',      // Mata o humano (remove da tela)
+  'move human down': 'ArrowDown', // Move humano entre linha tracejada e superfície
 };
 
 /**
@@ -298,14 +344,22 @@ async function generateVideo() {
     console.log('⏳ Aguardando aplicação React carregar...');
     await wait(3000);
 
-    // Garantir que a página está focada
+    // Garantir que a página está focada e clicar no body para garantir que eventos de teclado funcionem
     console.log('🖱️ Focando na página...');
+    await page.click('body');
     await page.focus('body');
     await wait(500);
 
     // Aguardar que a animação esteja pronta
     console.log('⏳ Aguardando componente estar pronto...');
     await wait(2000);
+    
+    // Garantir que a página está ativa e pode receber eventos de teclado
+    await page.evaluate(() => {
+      window.focus();
+      document.body.focus();
+    });
+    await wait(200);
 
     console.log(`📸 Capturando ${TOTAL_FRAMES} frames a ${FPS} FPS...`);
     
@@ -350,8 +404,25 @@ async function generateVideo() {
       while (nextScriptActionIndex < scriptActions.length) {
         const action = scriptActions[nextScriptActionIndex];
         if (frameTime >= action.time) {
-          console.log(`⌨️  Frame ${frame} (${(frameTime / 1000).toFixed(2)}s): Pressionando tecla '${action.key}'`);
+          console.log(`⌨️  Frame ${frame} (${(frameTime / 1000).toFixed(2)}s): Pressionando tecla '${action.key}' (comando: ${action.cmd})`);
+          
+          // Garantir que a página está focada antes de pressionar a tecla
+          await page.evaluate(() => {
+            window.focus();
+            if (document.activeElement && document.activeElement !== document.body) {
+              document.activeElement.blur();
+            }
+            document.body.focus();
+          });
+          
+          // Pressionar a tecla
           await page.keyboard.press(action.key);
+          
+          // Aguardar um pouco para garantir que o React processe o evento
+          // Aumentar o delay para comandos que mudam o estado do planeta
+          const isPlanetCommand = ['earth', 'rock', 'sun', 'switch planet'].includes(action.cmd);
+          await wait(isPlanetCommand ? 200 : 50);
+          
           nextScriptActionIndex++;
         } else {
           break; // Ainda não é hora desta ação

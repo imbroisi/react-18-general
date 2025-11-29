@@ -21,11 +21,12 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "npm run sync-script && react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "generate-video": "node scripts/generate-video.js"
+    "generate-video": "node scripts/generate-video.js",
+    "sync-script": "node scripts/sync-movie-script-json.js"
   },
   "eslintConfig": {
     "extends": [
