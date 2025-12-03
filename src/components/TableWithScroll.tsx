@@ -12,7 +12,7 @@ type TableWithScrollProps = {
 };
 
 // Array default com 20 itens
-const DEFAULT_TABLE_DATA: TableItem[] = Array.from({ length: 6 }).map((_, index) => ({
+const DEFAULT_TABLE_DATA: TableItem[] = Array.from({ length: 1 }).map((_, index) => ({
   col1: `Item ${index + 1} - Coluna 1`,
   col2: `Item ${index + 1} - Coluna 2`,
   col3: `Item ${index + 1} - Coluna 3`,
