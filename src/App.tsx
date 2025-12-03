@@ -1,10 +1,12 @@
 import './App.css';
-import EarthquakeImage from './components/EarthquakeImage';
-import TableWithScroll from './components/TableWithScroll';
+import NewtonCannon from './components/NewtonCannon';
 
 const App = () => {
-  // return <EarthquakeImage />;
-  return <TableWithScroll />
+  return (
+    <>
+      <NewtonCannon />
+    </>
+  );
 };
 
 export default App;
