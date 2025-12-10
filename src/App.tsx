@@ -1,8 +1,12 @@
 import './App.css';
-import ScrollableBox from './components/ScrollableBox';
+import PlusMinus from './components/PlusMinus';
 
 const App = () => {
-  return <ScrollableBox />;
+  return (
+    <div className="app-container">
+      <PlusMinus sign="minus" />
+    </div>
+  );
 };
 
 export default App;
