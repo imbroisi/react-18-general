@@ -1,13 +1,8 @@
 import './App.css';
-import NewtonCannon from './components/NewtonCannon';
-import TableWithScroll from './components/TableWithScroll';
+import ScrollableBox from './components/ScrollableBox';
 
 const App = () => {
-  return (
-    <>
-      <TableWithScroll />
-    </>
-  );
+  return <ScrollableBox />;
 };
 
 export default App;

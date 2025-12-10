@@ -32,7 +32,13 @@ const TableWithScroll: React.FC<TableWithScrollProps> = ({ tableData }) => {
         backgroundColor: '#fff',
       }}
     >
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'separate',
+          borderSpacing: 0,
+        }}
+      >
         <thead>
           <tr>
             <th
