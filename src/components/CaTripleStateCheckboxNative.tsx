@@ -19,12 +19,12 @@ const CaTripleStateCheckboxNative = ({
   const isIndeterminate = state === 'indeterminate';
 
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.checked = isChecked;
-      inputRef.current.indeterminate = isIndeterminate;
-      inputRef.current.style.setProperty('background-color', '#ffffff', 'important');
-      inputRef.current.style.setProperty('background', '#ffffff', 'important');
-    }
+    if (!inputRef.current) return;
+    
+    inputRef.current.checked = isChecked;
+    inputRef.current.indeterminate = isIndeterminate;
+    inputRef.current.style.setProperty('background-color', '#ffffff', 'important');
+    inputRef.current.style.setProperty('background', '#ffffff', 'important');
   }, [isChecked, isIndeterminate]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,14 +34,14 @@ const CaTripleStateCheckboxNative = ({
 
   const checkboxClassName = [
     styles.checkbox,
-    isChecked && styles.checked,
-    isIndeterminate && styles.indeterminate,
-  ].filter(Boolean).join(' ');
+    isChecked ? styles.checked : '',
+    isIndeterminate ? styles.indeterminate : '',
+  ].join(' ');
 
   const containerClassName = [
     styles.caCheckboxTripleStateContainer,
-    disabled && styles.disabled,
-  ].filter(Boolean).join(' ');
+    disabled ? styles.disabled : '',
+  ].join(' ');
 
   return (
     <div className={containerClassName}>
