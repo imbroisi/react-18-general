@@ -1,24 +1,13 @@
-import React, { useEffect, useRef } from 'react';
-import { Checkbox, CheckboxChangeEvent } from '@progress/kendo-react-inputs';
+import React from 'react';
+import { Checkbox, CheckboxChangeEvent, CheckboxProps } from '@progress/kendo-react-inputs';
 
+// API exposta: estados "checked", "unchecked" e "halfchecked".
 export type CaTripleState = 'checked' | 'unchecked' | 'halfchecked';
 
 type CaTripleStateCheckboxProps = {
   state: CaTripleState;
   disabled?: boolean;
-  onChange?: (nextState: CaTripleState, event: CheckboxChangeEvent) => void;
-};
-
-const getNextState = (current: CaTripleState): CaTripleState => {
-  switch (current) {
-    case 'unchecked':
-      return 'checked';
-    case 'checked':
-      return 'halfchecked';
-    case 'halfchecked':
-    default:
-      return 'unchecked';
-  }
+  onChange?: (checked: boolean, event: CheckboxChangeEvent) => void;
 };
 
 const CaTripleStateCheckbox: React.FC<CaTripleStateCheckboxProps> = ({
@@ -26,28 +15,22 @@ const CaTripleStateCheckbox: React.FC<CaTripleStateCheckboxProps> = ({
   disabled = false,
   onChange,
 }) => {
-  const checkboxRef = useRef<import('@progress/kendo-react-inputs').CheckboxHandle | null>(null);
-
-  useEffect(() => {
-    const inputEl = checkboxRef.current?.element;
-    if (inputEl) {
-      inputEl.indeterminate = state === 'halfchecked';
-    }
-  }, [state]);
-
   const handleChange = (event: CheckboxChangeEvent) => {
-    const nextState = getNextState(state);
-    onChange?.(nextState, event);
+    const checked = Boolean(event.value);
+    onChange?.(checked, event);
+  };
+
+  // A tipagem de CheckboxProps não expõe "indeterminate", mas o componente aceita a prop.
+  const checkboxProps: CheckboxProps & { indeterminate?: boolean } = {
+    checked: state === 'checked',
+    indeterminate: state === 'halfchecked',
+    disabled,
+    onChange: handleChange,
+    'aria-label': `ca triple state checkbox (${state}${disabled ? ', disabled' : ''})`,
   };
 
   return (
-    <Checkbox
-      ref={checkboxRef}
-      checked={state === 'checked'}
-      disabled={disabled}
-      onChange={handleChange}
-      // aria-label={`ca triple state checkbox (${state}${disabled ? ', disabled' : ''})`}
-    />
+    <Checkbox {...checkboxProps} />
   );
 };
 
