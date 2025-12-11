@@ -1,0 +1,44 @@
+.checkboxContainer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkboxInput {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  appearance: auto;
+}
+
+.checkboxInput:disabled {
+  cursor: not-allowed;
+}
+
+.plusIndicator {
+  position: absolute;
+  width: 6px;
+  height: 16px;
+  background: #111;
+  display: none;
+}
+
+.plusIndicator::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 6px;
+  background: #111;
+  transform: translate(-50%, -50%);
+}
+
+.showPlus .plusIndicator {
+  display: block;
+}
+
+
+
+

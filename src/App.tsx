@@ -1,10 +1,13 @@
+import React, { useState } from 'react';
 import './App.css';
-import PlusMinus from './components/PlusMinus';
+import CaTripleStateCheckbox, { CaTripleState } from './components/CaTripleStateCheckbox';
 
 const App = () => {
+  const [state, setState] = useState<CaTripleState>('unchecked');
+
   return (
     <div className="app-container">
-      <PlusMinus sign="minus" />
+      <CaTripleStateCheckbox state={state} onChange={setState} />
     </div>
   );
 };
