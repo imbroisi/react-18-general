@@ -23,8 +23,6 @@ const CaTripleStateCheckboxNative = ({
     
     inputRef.current.checked = isChecked;
     inputRef.current.indeterminate = isIndeterminate;
-    inputRef.current.style.setProperty('background-color', '#ffffff', 'important');
-    inputRef.current.style.setProperty('background', '#ffffff', 'important');
   }, [isChecked, isIndeterminate]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
