@@ -7,12 +7,16 @@ type CaTripleStateCheckboxNativeProps = {
   state: CaTripleState;
   disabled?: boolean;
   onChange?: (checked: boolean, event: React.ChangeEvent<HTMLInputElement>) => void;
+  className?: string;
+  style?: React.CSSProperties;
 };
 
 const CaTripleStateCheckboxNative = ({
   state,
   disabled = false,
   onChange,
+  className,
+  style,
 }: CaTripleStateCheckboxNativeProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const isChecked = state === 'checked';
@@ -39,10 +43,11 @@ const CaTripleStateCheckboxNative = ({
   const containerClassName = [
     styles.caCheckboxTripleStateContainer,
     disabled ? styles.disabled : '',
+    className || '',
   ].join(' ');
 
   return (
-    <div className={containerClassName}>
+    <div className={containerClassName} style={style}>
       <input
         ref={inputRef}
         type="checkbox"
